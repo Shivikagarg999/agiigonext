@@ -1,13 +1,21 @@
-const express= require('express')
-const app= express();
-const mongoose= require('mongoose')
+const express = require("express");
+const next = require("next");
+const mongoose = require("mongoose");
+const cors = require("cors");
+const bcrypt = require("bcryptjs");
+const jwt = require("jsonwebtoken");
+const server= express();
 const User = require("./models/User");
-const cors= require('cors');
-app.use(cors());
-const bcrypt = require("bcrypt");
-const Product= require('./models/Product')
-const jwt= require('jsonwebtoken')
-app.use(express.json());
+const Product = require("./models/Product");
+
+require("dotenv").config(); // Load environment variables
+
+const dev = process.env.NODE_ENV !== "production";
+const app = next({ dev }); // Next.js instance
+const handle = app.getRequestHandler(); // Next.js request handler
+
+server.use(cors());
+server.use(express.json());
 
 mongoose
   .connect("mongodb+srv://shivika:agiigo_karan@cluster0.reo6o.mongodb.net/agiigo-next")
@@ -16,7 +24,7 @@ mongoose
 
 
   //Product routes
-  app.get("/api/products", async (req, res) => {
+  server.get("/api/products", async (req, res) => {
     try {
       const products = await Product.find({});
       console.log("Fetched Products:", products); // ✅ Debugging log
@@ -26,7 +34,7 @@ mongoose
       res.status(500).json({ message: "Server error", error });
     }
   });
-  app.post("/api/products", async (req, res) => {
+  server.post("/api/products", async (req, res) => {
     try {
       const { name, description, price, category, image } = req.body;
       const newProduct = new Product({ name, description, price, category, image });
@@ -38,7 +46,7 @@ mongoose
   });
 
   //trending Products Routes
-  app.get("/api/trending-products", async (req, res) => {
+  server.get("/api/trending-products", async (req, res) => {
     try {
       const trendingProducts = await Product.find({ isTrending: true });
       res.json(trendingProducts);
@@ -48,7 +56,7 @@ mongoose
     }
   });
 // New Arrivals Route (Products from Last 24 Hours)
-app.get("/api/new-arrivals", async (req, res) => {
+server.get("/api/new-arrivals", async (req, res) => {
     try {
       const oneDayAgo = new Date();
       oneDayAgo.setDate(oneDayAgo.getDate() - 1); // 24 hours ago
@@ -61,7 +69,7 @@ app.get("/api/new-arrivals", async (req, res) => {
     }
   });  
 //fetch single product
-  app.get("/api/products/:id", async (req, res) => {
+  server.get("/api/products/:id", async (req, res) => {
     try {
       const product = await Product.findById(req.params.id);
       if (!product) return res.status(404).json({ message: "Product not found" });
@@ -73,7 +81,7 @@ app.get("/api/new-arrivals", async (req, res) => {
     }
   });
   //Login and Signup Routes
-  app.post("/api/login", async (req, res) => {
+  server.post("/api/login", async (req, res) => {
     const { email, password } = req.body;
 
     try {
@@ -109,7 +117,7 @@ app.get("/api/new-arrivals", async (req, res) => {
 });
 
 //Register 
-   app.post("/api/register", async (req, res) => {
+   server.post("/api/register", async (req, res) => {
   try {
     const { name, email, role, password, contact } = req.body;
 
@@ -134,6 +142,6 @@ app.get("/api/new-arrivals", async (req, res) => {
   });
 
   const PORT = 4000;
-  app.listen(PORT, () => {
+  server.listen(PORT, () => {
     console.log(`Server running on http://localhost:${PORT}`);
   });
