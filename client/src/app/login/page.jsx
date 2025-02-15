@@ -3,6 +3,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Nav from "../nav/Nav";
 import Footer from "../footer/Footer";
+const api_url = process.env.NEXT_PUBLIC_API_URL;
 
 export default function LoginForm() {
   const router = useRouter();

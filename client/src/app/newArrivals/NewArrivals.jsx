@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
+const api_url = process.env.NEXT_PUBLIC_API_URL;
 
 const NewArrivals = () => {
   const [products, setProducts] = useState([]);

@@ -2,6 +2,7 @@
 import Footer from "@/app/footer/Footer";
 import Nav from "@/app/nav/Nav";
 import { useState } from "react";
+const api_url = process.env.NEXT_PUBLIC_API_URL;
 
 export default function AddProduct() {
   const [formData, setFormData] = useState({
