@@ -3,7 +3,6 @@ const app= express();
 const mongoose= require('mongoose')
 const User = require("./models/User");
 const cors= require('cors');
-app.use(cors());
 const bcrypt = require("bcryptjs");
 const Product= require('./models/Product')
 const jwt= require('jsonwebtoken')
@@ -15,7 +14,13 @@ mongoose
   .then(() => console.log("MongoDB Connected"))
   .catch((err) => console.error("MongoDB connection error:", err));
 
-
+  const corsOptions = {
+    origin: 'https://agiigo.com',
+    methods: ['GET', 'POST'],
+    allowedHeaders: ['Content-Type', 'Authorization']
+  };
+  app.use(cors(corsOptions));
+  
   //Product routes
   app.get("/api/products", async (req, res) => {
     try {

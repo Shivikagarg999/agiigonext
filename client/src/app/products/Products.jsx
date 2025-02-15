@@ -7,7 +7,7 @@ const Products = () => {
   useEffect(() => {
     const fetchProducts = async () => {
       try {
-        const res = await fetch("https://agiigo.onrender.com/api/products");
+        const res = await fetch(`${api_url}/api/products`);
         const data = await res.json();
         setProducts(data);
       } catch (error) {

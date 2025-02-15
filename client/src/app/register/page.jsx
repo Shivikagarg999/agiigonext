@@ -25,7 +25,7 @@ export default function RegisterPage() {
     setMessage(""); // Clear any previous message
 
     try {
-      const res = await fetch("https://agiigo.onrender.com/api/register", {
+      const res = await fetch(`${api_url}/api/register`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(formData),

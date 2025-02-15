@@ -7,7 +7,7 @@ const TrendingProducts = () => {
   useEffect(() => {
     const fetchTrendingProducts = async () => {
       try {
-        const res = await fetch("https://agiigo.onrender.com/api/trending-products");
+        const res = await fetch(`${api_url}/api/trending-products`);
         const data = await res.json();
         setTrendingProducts(data);
       } catch (error) {

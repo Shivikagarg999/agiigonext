@@ -7,7 +7,7 @@ const NewArrivals = () => {
   useEffect(() => {
     const fetchNewArrivals = async () => {
       try {
-        const res = await fetch("http://agiigo.onrender.com/api/new-arrivals");
+        const res = await fetch(`${api_url}/api/new-arrivals`);
         const data = await res.json();
         setProducts(data);
       } catch (error) {
