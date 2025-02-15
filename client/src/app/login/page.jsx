@@ -20,7 +20,7 @@ export default function LoginForm() {
     setLoading(true); // Start loading
 
     try {
-      const res = await fetch("http://agiigo.com/api/login", {
+      const res = await fetch("http://agiigo.onrender.com/api/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(form),

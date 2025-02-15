@@ -21,7 +21,7 @@ export default function AddProduct() {
     setMessage("");
 
     try {
-      const response = await fetch("http://agiigo.com/api/products", { // ✅ Updated backend URL
+      const response = await fetch("http://agiigo.onrender.com/api/products", { // ✅ Updated backend URL
         method: "POST",
         headers: {
           "Content-Type": "application/json",

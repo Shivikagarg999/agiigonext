@@ -23,7 +23,7 @@ export default function AddProduct() {
     setMessage("");
 
     try {
-      const response = await fetch("http://agiigo.com/api/products", {
+      const response = await fetch("http://agiigo.onrender.com/api/products", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
