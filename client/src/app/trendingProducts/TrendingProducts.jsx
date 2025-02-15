@@ -7,7 +7,7 @@ const TrendingProducts = () => {
   useEffect(() => {
     const fetchTrendingProducts = async () => {
       try {
-        const res = await fetch("http://localhost:4000/api/trending-products");
+        const res = await fetch("http://agiigo.com/api/trending-products");
         const data = await res.json();
         setTrendingProducts(data);
       } catch (error) {

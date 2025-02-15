@@ -25,7 +25,7 @@ export default function RegisterPage() {
     setMessage(""); // Clear any previous message
 
     try {
-      const res = await fetch("http://localhost:4000/api/register", {
+      const res = await fetch("http://agiigo.com/api/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(formData),

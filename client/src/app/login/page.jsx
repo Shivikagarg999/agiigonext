@@ -20,7 +20,7 @@ export default function LoginForm() {
     setLoading(true); // Start loading
 
     try {
-      const res = await fetch("http://localhost:4000/api/login", {
+      const res = await fetch("http://agiigo.com/api/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(form),
@@ -35,7 +35,7 @@ export default function LoginForm() {
 
       // Redirect based on role
       if (data.user.role === "buyer") {
-        router.push("/buyer");
+        router.push("/pages/buyer");
       } else if (data.user.role === "seller") {
         router.push("/seller");
       }

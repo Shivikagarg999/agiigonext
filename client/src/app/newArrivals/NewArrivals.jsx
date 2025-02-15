@@ -7,7 +7,7 @@ const NewArrivals = () => {
   useEffect(() => {
     const fetchNewArrivals = async () => {
       try {
-        const res = await fetch("http://localhost:4000/api/new-arrivals");
+        const res = await fetch("http://agiigo.com/api/new-arrivals");
         const data = await res.json();
         setProducts(data);
       } catch (error) {
