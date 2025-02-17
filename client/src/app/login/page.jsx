@@ -21,7 +21,7 @@ export default function LoginForm() {
     setLoading(true); // Start loading
 
     try {
-      const res = await fetch(`${api_url}/api/login`, {
+      const res = await fetch('https://api.agiigo.com/api/login', {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(form),

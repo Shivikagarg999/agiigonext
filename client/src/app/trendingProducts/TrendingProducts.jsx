@@ -1,6 +1,5 @@
 "use client";
 import { useEffect, useState } from "react";
-const api_url = process.env.NEXT_PUBLIC_API_URL;
 
 
 const TrendingProducts = () => {
@@ -9,7 +8,7 @@ const TrendingProducts = () => {
   useEffect(() => {
     const fetchTrendingProducts = async () => {
       try {
-        const res = await fetch(`${api_url}/api/trending-products`);
+        const res = await fetch('https://api.agiigo.com/api/trending-products');
         const data = await res.json();
         setTrendingProducts(data);
       } catch (error) {

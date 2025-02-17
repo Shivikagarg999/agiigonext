@@ -1,6 +1,5 @@
 "use client";
 import { useEffect, useState } from "react";
-const api_url = process.env.NEXT_PUBLIC_API_URL;
 
 const NewArrivals = () => {
   const [products, setProducts] = useState([]);
@@ -8,7 +7,7 @@ const NewArrivals = () => {
   useEffect(() => {
     const fetchNewArrivals = async () => {
       try {
-        const res = await fetch(`${process.env.api_url}/api/new-arrivals`);
+        const res = await fetch('https://api.agiigo.com/api/new-arrivals');
         const data = await res.json();
         setProducts(data);
       } catch (error) {
