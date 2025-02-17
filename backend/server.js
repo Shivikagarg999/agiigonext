@@ -15,7 +15,7 @@ mongoose
   .catch((err) => console.error("MongoDB connection error:", err));
 
   const corsOptions = {
-    origin: 'https://agiigo.com',
+    origin: ['https://agiigo.com', 'http://localhost:3000'],
     methods: ['GET', 'POST'],
     allowedHeaders: ['Content-Type', 'Authorization']
   };
