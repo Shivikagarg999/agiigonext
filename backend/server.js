@@ -17,7 +17,11 @@ mongoose
   .catch((err) => console.error("MongoDB connection error:", err));
 
   const corsOptions = {
+<<<<<<< HEAD
     origin: ['https://agiigo.com', 'http://localhost:3000'], // Allow both origins
+=======
+    origin: ['https://agiigo.com', 'http://localhost:3000'],
+>>>>>>> 2dd050c05f04b45da14b4b146a735f5f7edf26c1
     methods: ['GET', 'POST'],
     allowedHeaders: ['Content-Type', 'Authorization']
   };
