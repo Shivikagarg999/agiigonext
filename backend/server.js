@@ -24,33 +24,6 @@ mongoose
   };
   app.use(cors(corsOptions));
 
-
-
-// Middleware to authenticate seller
-const authenticateSeller = (req, res, next) => {
-  const token = req.headers['authorization']; // Token is typically passed in the Authorization header
-  
-  if (!token) {
-    return res.status(403).json({ error: "No token provided" });
-  }
-
-  // Verify the token using JWT
-  jwt.verify(token, process.env.JWT_SECRET, (err, decoded) => {
-    if (err) {
-      return res.status(401).json({ error: "Invalid or expired token" });
-    }
-
-    // Attach user data to the request object
-    req.user = decoded;
-
-    // Check if the user is a seller 
-    if (req.user.role !== 'seller') {
-      return res.status(403).json({ error: "Unauthorized. Only sellers can perform this action." });
-    }
-
-    next();
-  });
-};
   //Product routes
   app.get("/api/products", async (req, res) => {
     try {
@@ -59,6 +32,16 @@ const authenticateSeller = (req, res, next) => {
     } catch (error) {
       console.error("Error fetching products:", error);
       res.status(500).json({ message: "Server error", error });
+    }
+  });
+  app.post("/api/products", async (req, res) => {
+    try {
+      const { name, description, price, category, image } = req.body;
+      const newProduct = new Product({ name, description, price, category, image });
+      await newProduct.save();
+      res.status(201).json(newProduct);
+    } catch (err) {
+      res.status(500).json({ error: "Failed to add product" });
     }
   });
 
@@ -157,75 +140,40 @@ app.get("/api/new-arrivals", async (req, res) => {
     res.status(500).json({ message: "Server error", error: error.message });
   }
   });
-  // SELLER UPLAOD PRODUCTS
-  app.post("/api/products", authenticateSeller, async (req, res) => {
-    const { name, description, price, category, image } = req.body;
-  
-    try {
-      const newProduct = new Product({ name, description, price, category, image });
-      await newProduct.save();
-  
-      // Find the seller and add the product to their products array
-      const user = await User.findById(req.user.userId); // Access the authenticated user's ID from the token
-      if (!user) return res.status(404).json({ error: "Seller not found" });
-  
-      user.products.push(newProduct._id); // Add product ID to seller's products array
-      await user.save();
-  
-      res.status(201).json(newProduct);
-    } catch (err) {
-      res.status(500).json({ error: "Failed to add product" });
-    }
-  });  
-  app.post("/api/products/csv", authenticateSeller, upload.single('file'), async (req, res) => {
-    if (!req.file) {
-      return res.status(400).json({ error: "No file uploaded" });
-    }
-  
-    const results = [];
-  
-    // Parse the CSV file
-    fs.createReadStream(req.file.path)
-      .pipe(csvParser())
-      .on('data', (row) => {
-        const { name, description, price, category, image } = row;
-        if (name && description && price && category) {
-          results.push({ name, description, price: parseFloat(price), category, image });
-        }
-      })
-      .on('end', async () => {
-        try {
-          const products = await Product.insertMany(results);
-  
-          // Find the seller and add the products to their products array
-          const user = await User.findById(req.user.userId);
-          if (!user) return res.status(404).json({ error: "Seller not found" });
-  
-          user.products.push(...products.map(product => product._id)); // Add all products to seller's products array
-          await user.save();
-  
-          // Delete the uploaded CSV file after processing
-          fs.unlinkSync(req.file.path);
-  
-          res.status(201).json({
-            message: `${products.length} products added successfully!`,
-            products,
-          });
-        } catch (err) {
-          res.status(500).json({ error: "Failed to upload products" });
-        }
-      });
-  });
-//SELLER PRODUCTS DISPLAY
-app.get("/api/seller/products", authenticateSeller, async (req, res) => {
-  try {
-    // Find all products for the logged-in seller
-    const products = await Product.find({ seller: req.user.userId }); // Assuming 'seller' field in Product model
-    res.json(products);
-  } catch (error) {
-    console.error("Error fetching seller's products:", error);
-    res.status(500).json({ message: "Server error", error });
+//seller upload product by CSV route
+app.post("/api/products/csv", upload.single('file'), async (req, res) => {
+  if (!req.file) {
+    return res.status(400).json({ error: "No file uploaded" });
   }
+
+  const results = [];
+
+  // Parse the CSV file
+  fs.createReadStream(req.file.path)
+    .pipe(csvParser())
+    .on('data', (row) => {
+      // You can adjust the keys as per your CSV file format
+      const { name, description, price, category, image } = row;
+      if (name && description && price && category) {
+        results.push({ name, description, price: parseFloat(price), category, image });
+      }
+    })
+    .on('end', async () => {
+      try {
+        // Save each product to the database
+        const products = await Product.insertMany(results);
+
+        // Delete the uploaded CSV file after processing
+        fs.unlinkSync(req.file.path);
+
+        res.status(201).json({
+          message: `${products.length} products added successfully!`,
+          products,
+        });
+      } catch (err) {
+        res.status(500).json({ error: "Failed to upload products" });
+      }
+    });
 });
 
   const PORT = 4000;
