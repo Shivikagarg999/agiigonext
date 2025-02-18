@@ -1,6 +1,4 @@
 "use client";
-import Footer from "@/app/footer/Footer";
-import Nav from "@/app/nav/Nav";
 import { useState } from "react";
 const api_url = process.env.NEXT_PUBLIC_API_URL;
 
@@ -52,7 +50,6 @@ export default function AddProduct() {
 
   return (
     <>
-    <Nav/>
     <div className="max-w-lg mx-auto p-8 bg-white shadow-lg rounded-lg border-2 border-orange-400 mb-8 mt-8">
       <h2 className="text-3xl font-semibold text-center text-orange-600 mb-6">Add a New Product</h2>
       
@@ -150,7 +147,6 @@ export default function AddProduct() {
         </div>
       </form>
     </div>
-    <Footer/>
     </>
   );
 }

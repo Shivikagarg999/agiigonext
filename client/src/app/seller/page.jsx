@@ -1,8 +1,16 @@
+import CsvUpload from "../csvProd/CsvProds";
+import Footer from "../footer/Footer";
+import Nav from "../nav/Nav";
+import AddProduct from "../pages/addProducts/page";
+
 export default function SellerPage() {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-gray-100">
-        <h1 className="text-2xl font-bold">Welcome, Seller!</h1>
-      </div>
+      <>
+        <Nav/>
+        <AddProduct/>
+        <CsvUpload/>
+        <Footer/>
+      </>
     );
   }
   
