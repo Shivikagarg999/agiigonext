@@ -9,7 +9,8 @@ const jwt= require('jsonwebtoken')
 app.use(express.json());
 require('dotenv').config();
 const multer= require('multer');
-const upload = multer({ dest: "uploads/" });
+const upload = multer({ dest: "uploads/" });const fs = require("fs");
+const csvParser = require("csv-parser");
 
 mongoose
   .connect("mongodb+srv://shivika:agiigo_karan@cluster0.reo6o.mongodb.net/agiigo-next")
@@ -17,12 +18,12 @@ mongoose
   .catch((err) => console.error("MongoDB connection error:", err));
 
   const corsOptions = {
-    origin: ['https://agiigo.com', 'http://localhost:3000'], // Allow both origins
+    origin: ['https://agiigo.com', 'http://localhost:3000'],
     methods: ['GET', 'POST'],
     allowedHeaders: ['Content-Type', 'Authorization']
   };
-  app.use(cors(corsOptions));  
-  
+  app.use(cors(corsOptions));
+
   //Product routes
   app.get("/api/products", async (req, res) => {
     try {
