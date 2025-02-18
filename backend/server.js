@@ -8,6 +8,8 @@ const Product= require('./models/Product')
 const jwt= require('jsonwebtoken')
 app.use(express.json());
 require('dotenv').config();
+const multer= require('multer');
+const upload = multer({ dest: "uploads/" });
 
 mongoose
   .connect("mongodb+srv://shivika:agiigo_karan@cluster0.reo6o.mongodb.net/agiigo-next")
@@ -15,11 +17,11 @@ mongoose
   .catch((err) => console.error("MongoDB connection error:", err));
 
   const corsOptions = {
-    origin: 'https://agiigo.com',
+    origin: ['https://agiigo.com', 'http://localhost:3000'], // Allow both origins
     methods: ['GET', 'POST'],
     allowedHeaders: ['Content-Type', 'Authorization']
   };
-  app.use(cors(corsOptions));
+  app.use(cors(corsOptions));  
   
   //Product routes
   app.get("/api/products", async (req, res) => {
@@ -137,6 +139,41 @@ app.get("/api/new-arrivals", async (req, res) => {
     res.status(500).json({ message: "Server error", error: error.message });
   }
   });
+//seller upload product by CSV route
+app.post("/api/products/csv", upload.single('file'), async (req, res) => {
+  if (!req.file) {
+    return res.status(400).json({ error: "No file uploaded" });
+  }
+
+  const results = [];
+
+  // Parse the CSV file
+  fs.createReadStream(req.file.path)
+    .pipe(csvParser())
+    .on('data', (row) => {
+      // You can adjust the keys as per your CSV file format
+      const { name, description, price, category, image } = row;
+      if (name && description && price && category) {
+        results.push({ name, description, price: parseFloat(price), category, image });
+      }
+    })
+    .on('end', async () => {
+      try {
+        // Save each product to the database
+        const products = await Product.insertMany(results);
+
+        // Delete the uploaded CSV file after processing
+        fs.unlinkSync(req.file.path);
+
+        res.status(201).json({
+          message: `${products.length} products added successfully!`,
+          products,
+        });
+      } catch (err) {
+        res.status(500).json({ error: "Failed to upload products" });
+      }
+    });
+});
 
   const PORT = 4000;
   app.listen(PORT, () => {
