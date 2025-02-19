@@ -64,9 +64,9 @@ export default function ProductsPage() {
     <Nav/>
     <div className="container mx-auto px-6 py-10">
       {/* Hero Image */}
-      <div className="relative w-full h-64 md:h-96 bg-gray-200 flex items-center justify-center">
-        <img src="/images/prod.jpeg" alt="Shop Banner" className="w-full h-full object-cover rounded-md" />
-      </div>
+      <div className="relative w-full h-auto max-h-[96vh] flex items-center justify-center overflow-hidden rounded-lg">
+          <img src="/images/prod.jpeg" alt="Shop Banner" className="w-full h-auto object-cover" />
+        </div>
 
       <div className="mt-10 flex flex-col md:flex-row gap-8">
         {/* Sidebar Filters */}
@@ -127,22 +127,36 @@ export default function ProductsPage() {
             <p className="text-center text-gray-500">No products found.</p>
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-              {filteredProducts.map((product, index) => (
-                <div key={product.id || index} className="border rounded-lg shadow-md p-4 hover:shadow-lg transition">
-                  <img
-                    src={product.image}
-                    alt={product.name}
-                    className="w-full h-48 object-cover rounded-md"
-                  />
-                  <h2 className="text-xl font-semibold mt-4">{product.name}</h2>
-                  <p className="text-gray-600">${product.price}</p>
-                  <button className="mt-2 bg-[#EB8426] text-white py-2 px-4 rounded hover:bg-orange-700 transition">
-                    Add to Cart
-                  </button>
-                </div>
-              ))}
-            </div>
-          )}
+           {filteredProducts.map((product) => {
+  return (
+    <a 
+      key={product.id || product._id} 
+      href={`/products/${product.id || product._id}`} 
+      className="border rounded-lg shadow-md p-4 hover:shadow-lg transition cursor-pointer"
+    >
+      <img
+        src={product.image}
+        alt={product.name}
+        className="w-full h-48 object-cover rounded-md"
+      />
+      <h2 className="text-xl font-semibold mt-4">{product.name}</h2>
+      <p className="text-gray-600">${product.price}</p>
+
+      {/* Add to Cart Button */}
+      <button
+        className="bg-[#EB8426] text-white py-2 px-4 rounded hover:bg-orange-700 transition mt-4 w-full"
+        onClick={(e) => {
+          e.stopPropagation(); // Prevent link click from firing
+          addToCart(product);
+        }}
+      >
+        Add to Cart
+      </button>
+    </a>
+  );
+})}
+          </div>          
+      )}
         </div>
       </div>
     </div>

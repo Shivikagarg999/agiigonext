@@ -21,30 +21,37 @@ const Products = () => {
 
   return (
     <div className="p-8 bg-white">
-      <h1 className="text-3xl font-bold text-black mb-6">Explore Our Products</h1>
-      <div className="overflow-x-auto whitespace-nowrap scrollbar-hide">
-        <div className="flex gap-6">
-          {products.map((product) => (
-            <a
-              key={product._id}
-              href={`/product/${product._id}`}
-              className="bg-white shadow-lg rounded-lg p-4 min-w-[250px] h-[420px] flex flex-col justify-between border block"
+    <h1 className="text-3xl font-bold text-black mb-6">Explore Our Products</h1>
+    <div className="overflow-x-auto scrollbar-hide">
+      <div className="flex flex-wrap gap-6 ">
+        {products.map((product) => (
+          <a 
+            key={product.id || product._id} 
+            href={`/products/${product.id || product._id}`} 
+            className="border rounded-lg shadow-md p-4 flex-grow basis-[90%] sm:basis-[45%] md:basis-[30%] lg:basis-[22%] xl:basis-[18%] max-w-xs hover:shadow-lg transition cursor-pointer"
+          >
+            <img
+              src={product.image}
+              alt={product.name}
+              className="w-full h-48 object-cover rounded-md"
+            />
+            <h2 className="text-xl font-semibold mt-4">{product.name}</h2>
+            <p className="text-gray-600">${product.price}</p>
+  
+            <button
+              className="bg-[#EB8426] text-white py-2 px-4 rounded hover:bg-orange-700 transition mt-4 w-full"
+              onClick={(e) => {
+                e.stopPropagation(); // Prevent link click from firing
+                addToCart(product);
+              }}
             >
-              <img
-                src={product.image}
-                alt={product.name}
-                className="w-full h-[320px] object-contain rounded-md"
-              />
-              <div>
-                <h2 className="text-lg font-semibold text-black">{product.name}</h2>
-                <p className="text-gray-600 text-sm">{product.description}</p>
-                <p className="text-xl font-bold text-black">₹{product.price}</p>
-              </div>
-            </a>
-          ))}
-        </div>
+              Add to Cart
+            </button>
+          </a>
+        ))}
       </div>
     </div>
+  </div>  
   );
 };
 
