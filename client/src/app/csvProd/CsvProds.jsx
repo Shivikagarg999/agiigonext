@@ -24,9 +24,20 @@ export default function CsvUpload() {
     const formData = new FormData();
     formData.append("file", file);
 
+    // Get the token from localStorage (or cookies, context, etc.)
+    const token = localStorage.getItem("token");
+
+    if (!token) {
+      setMessage("No token provided. Please log in.");
+      return;
+    }
+
     try {
       const response = await fetch('https://api.agiigo.com/api/products/csv', {
         method: "POST",
+        headers: {
+          "Authorization": `Bearer ${token}`, // Include the token in the Authorization header
+        },
         body: formData,
       });
 

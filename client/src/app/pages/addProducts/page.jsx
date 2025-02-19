@@ -20,16 +20,25 @@ export default function AddProduct() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setMessage("");
-
+  
+    // Get the token from localStorage (or cookies, context, etc.)
+    const token = localStorage.getItem("token");
+  
+    if (!token) {
+      setMessage("No token provided. Please log in.");
+      return;
+    }
+  
     try {
       const response = await fetch('https://api.agiigo.com/api/products', {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`, // Include the token in Authorization header
         },
         body: JSON.stringify(formData),
       });
-
+  
       const data = await response.json();
       if (response.ok) {
         setMessage("Product added successfully!");
@@ -47,6 +56,7 @@ export default function AddProduct() {
       setMessage("Error adding product.");
     }
   };
+  
 
   return (
     <>

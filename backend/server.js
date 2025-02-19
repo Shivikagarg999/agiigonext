@@ -19,10 +19,34 @@ mongoose
 
   const corsOptions = {
     origin: ['https://agiigo.com', 'http://localhost:3000'],
+    // origin: [ 'http://localhost:3000'],
     methods: ['GET', 'POST'],
     allowedHeaders: ['Content-Type', 'Authorization']
   };
   app.use(cors(corsOptions));
+  
+ 
+const authenticateSeller = async (req, res, next) => {
+  const token = req.header("Authorization");
+
+  if (!token) {
+      return res.status(401).json({ error: "No token provided" });
+  }
+
+  try {
+      const decoded = jwt.verify(token.replace("Bearer ", ""), process.env.JWT_SECRET);
+      const user = await User.findById(decoded.userId);
+
+      if (!user || user.role !== "seller") {
+          return res.status(403).json({ error: "Access denied. Seller only." });
+      }
+
+      req.user = user;
+      next();
+  } catch (error) {
+      res.status(401).json({ error: "Invalid token" });
+  }
+};
 
   //Product routes
   app.get("/api/products", async (req, res) => {
@@ -32,16 +56,6 @@ mongoose
     } catch (error) {
       console.error("Error fetching products:", error);
       res.status(500).json({ message: "Server error", error });
-    }
-  });
-  app.post("/api/products", async (req, res) => {
-    try {
-      const { name, description, price, category, image } = req.body;
-      const newProduct = new Product({ name, description, price, category, image });
-      await newProduct.save();
-      res.status(201).json(newProduct);
-    } catch (err) {
-      res.status(500).json({ error: "Failed to add product" });
     }
   });
 
@@ -140,41 +154,101 @@ app.get("/api/new-arrivals", async (req, res) => {
     res.status(500).json({ message: "Server error", error: error.message });
   }
   });
-//seller upload product by CSV route
-app.post("/api/products/csv", upload.single('file'), async (req, res) => {
+
+   // SELLER UPLOAD PRODUCTS ROUTES 
+ app.post("/api/products", authenticateSeller, async (req, res) => {
+    try {
+        const { name, description, price, category, image } = req.body;
+
+        if (!name || !description || !price || !category) {
+            console.log("Missing fields:", req.body);
+            return res.status(400).json({ error: "All fields are required" });
+        }
+
+        const newProduct = new Product({
+            name,
+            description,
+            price,
+            category,
+            image,
+            seller: req.user._id, // Assign the seller ID
+        });
+
+        await newProduct.save();
+
+        // Add product reference in seller's products array
+        await User.findByIdAndUpdate(req.user._id, {
+            $push: { products: newProduct._id }
+        });
+
+        res.status(201).json({ message: "Product uploaded successfully", product: newProduct });
+    } catch (err) {
+        console.error("Error uploading product:", err);
+        res.status(500).json({ error: "Failed to upload product", details: err.message });
+    }
+});
+app.post("/api/products/csv", authenticateSeller, upload.single("file"), async (req, res) => {
   if (!req.file) {
-    return res.status(400).json({ error: "No file uploaded" });
+      return res.status(400).json({ error: "No file uploaded" });
   }
 
   const results = [];
 
-  // Parse the CSV file
   fs.createReadStream(req.file.path)
-    .pipe(csvParser())
-    .on('data', (row) => {
-      // You can adjust the keys as per your CSV file format
-      const { name, description, price, category, image } = row;
-      if (name && description && price && category) {
-        results.push({ name, description, price: parseFloat(price), category, image });
-      }
-    })
-    .on('end', async () => {
-      try {
-        // Save each product to the database
-        const products = await Product.insertMany(results);
+      .pipe(csvParser())
+      .on("data", (row) => {
+          const { name, description, price, category, image } = row;
+          if (name && description && price && category) {
+              results.push({
+                  name,
+                  description,
+                  price: parseFloat(price),
+                  category,
+                  image,
+                  seller: req.user._id, // Assign the seller ID
+              });
+          }
+      })
+      .on("end", async () => {
+          try {
+              const products = await Product.insertMany(results);
 
-        // Delete the uploaded CSV file after processing
-        fs.unlinkSync(req.file.path);
+              // Store products in seller's user document
+              await User.findByIdAndUpdate(req.user._id, {
+                  $push: { products: { $each: products.map((p) => p._id) } },
+              });
 
-        res.status(201).json({
-          message: `${products.length} products added successfully!`,
-          products,
-        });
-      } catch (err) {
-        res.status(500).json({ error: "Failed to upload products" });
-      }
-    });
+              fs.unlinkSync(req.file.path);
+
+              res.status(201).json({
+                  message: `${products.length} products added successfully!`,
+                  products,
+              });
+          } catch (err) {
+              console.error("CSV Upload Error:", err);
+              res.status(500).json({ error: "Failed to upload products" });
+          }
+      });
 });
+// GET SELLER PRODUCTS
+// app.get('/api/products/seller', async (req, res) => {
+//   try {
+//     // Ensure `req.user.id` is a valid ObjectId
+//     const userId = mongoose.Types.ObjectId(req.user.id); // Cast string to ObjectId
+
+//     // Find products by the seller's user ID
+//     const products = await Product.find({ user: userId });
+
+//     if (products.length === 0) {
+//       return res.status(404).json({ message: "No products found." });
+//     }
+
+//     return res.status(200).json({ products });
+//   } catch (error) {
+//     console.error(error);
+//     return res.status(500).json({ message: "Server error", error });
+//   }
+// });
 
   const PORT = 4000;
   app.listen(PORT, () => {

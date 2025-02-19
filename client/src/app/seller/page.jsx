@@ -2,6 +2,7 @@ import CsvUpload from "../csvProd/CsvProds";
 import Footer from "../footer/Footer";
 import Nav from "../nav/Nav";
 import AddProduct from "../pages/addProducts/page";
+// import SellerProducts from "../sellerproducts/page";
 
 export default function SellerPage() {
     return (
@@ -9,6 +10,7 @@ export default function SellerPage() {
         <Nav/>
         <AddProduct/>
         <CsvUpload/>
+        {/* <SellerProducts/> */}
         <Footer/>
       </>
     );
