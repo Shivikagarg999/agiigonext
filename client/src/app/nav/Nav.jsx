@@ -17,7 +17,7 @@ export default function Nav() {
         <ul className="hidden lg:flex items-center space-x-8 text-lg font-semibold">
           <li><a href="/" className="text-gray-700 hover:text-black">Home</a></li>
           <li className="flex items-center space-x-1">
-            <a href="/products" className="text-gray-700 hover:text-black">Shop</a>
+            <a href="/shop" className="text-gray-700 hover:text-black">Shop</a>
             <ChevronDown className="h-5 w-5 text-gray-700" />
           </li>
           <li><a href="#" className="text-gray-700 hover:text-black">About</a></li>
@@ -45,7 +45,7 @@ export default function Nav() {
         <div className="lg:hidden bg-white shadow-md py-4 px-6">
           <ul className="flex flex-col space-y-4 text-lg font-semibold">
             <li><a href="/" className="text-gray-700 hover:text-black">Home</a></li>
-            <li><a href="/products" className="text-gray-700 hover:text-black">Shop</a></li>
+            <li><a href="/shop" className="text-gray-700 hover:text-black">Shop</a></li>
             <li><a href="#" className="text-gray-700 hover:text-black">About</a></li>
             <li><a href="#" className="text-gray-700 hover:text-black">Contact</a></li>
             <li>
