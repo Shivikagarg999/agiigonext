@@ -9,7 +9,9 @@ export default function Nav() {
     <nav className="bg-white py-5 shadow-md">
       <div className="container mx-auto flex justify-between items-center px-6">
         {/* Logo */}
-        <a href="#" className="text-2xl font-bold text-[#EB8426]">AGIIGO</a>
+        <a href="#" className="text-2xl font-bold text-[#EB8426]">
+          <img src="/images/logo.jpg" className="h-8"></img>
+        </a>
 
         {/* Desktop Menu */}
         <ul className="hidden lg:flex items-center space-x-8 text-lg font-semibold">

@@ -14,7 +14,9 @@ export default function Footer() {
         <div className="w-full md:w-1/3">
           {/* <img src={Logo} alt="VahanHelp Logo" className="h-16" /> */}
           
-        <h2 className="text-[#EB8426] font-semibold text-4xl">AGIIGO</h2>
+        <h2 className="text-[#EB8426] font-semibold text-4xl">
+          <img src="/images/logo.jpg" className="h-8"></img>
+        </h2>
           <p className="text-[16px] mt-4">
             Our vision is to provide convenience and help increase your sales business.
           </p>

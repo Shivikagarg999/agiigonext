@@ -7,10 +7,12 @@ import TrendingProducts from "./trendingProducts/TrendingProducts";
 import Home from "./home/Home";
 import Footer from "./footer/Footer";
 import FAQ from "./FAQs/Faqs";
+import TopBar from "./components/TopBar";
 
 export default function Page() {
   return (
     <>
+    <TopBar/>
     <Nav/>
     <Home/>
     {/* <AddProduct/> */}
