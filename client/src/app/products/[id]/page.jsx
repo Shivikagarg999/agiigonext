@@ -29,7 +29,26 @@ export default function ProductDetails() {
     if (id) fetchProduct();
   }, [id]);
 
-  const addToCart = () => console.log("Added to cart:", product);
+  const addToCart = async (productId, quantity = 1) => {
+    try {
+        const res = await fetch("https://api.agiigo.com/api/cart/add", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            credentials: "include", // Ensure session authentication
+            body: JSON.stringify({ productId, quantity }),
+        });
+
+        const data = await res.json();
+        if (res.ok) {
+            alert("Item added to cart!");
+        } else {
+            alert(data.message || "Failed to add to cart.");
+        }
+    } catch (error) {
+        console.error("Error adding to cart:", error);
+    }
+};
+
   const buyNow = () => console.log("Buying now:", product);
 
   if (loading) return <p className="text-center text-gray-500">Loading...</p>;
@@ -78,12 +97,13 @@ export default function ProductDetails() {
 
             {/* Buttons */}
             <div className="flex flex-col sm:flex-row gap-4">
-              <button
-                className="bg-[#EB8426] text-white py-3 px-6 rounded-lg hover:bg-orange-700 transition w-full sm:w-auto"
-                onClick={addToCart}
-              >
-                Add to Cart
-              </button>
+            <button
+  className="bg-[#EB8426] text-white py-3 px-6 rounded-lg hover:bg-orange-700 transition w-full sm:w-auto"
+  onClick={() => addToCart(product._id, quantity)}
+>
+  Add to Cart
+</button>
+
               <button
                 className="border border-[#EB8426] text-[#EB8426] py-3 px-6 rounded-lg hover:bg-[#EB8426] hover:text-white transition w-full sm:w-auto"
                 onClick={buyNow}

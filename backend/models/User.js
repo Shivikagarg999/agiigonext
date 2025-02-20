@@ -26,10 +26,6 @@ const userSchema = new mongoose.Schema({
         type: String,
         required: true,
     },
-    cart: [{
-        productId: { type: mongoose.Schema.Types.ObjectId, ref: 'Product' },
-        quantity: { type: Number, default: 1 }
-    }],
     address: String,
     state: String,
     city: String,
