@@ -14,11 +14,15 @@ const geistMono = Geist_Mono({
 export const metadata = {
   title: "Agiigo",
   description: "Ecommerce website Auction based",
+  icons: {
+    icon: "../images/logo.jpg", 
+  },
 };
 
 export default function RootLayout({ children }) {
   return (
     <html lang="en">
+      <head />
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
