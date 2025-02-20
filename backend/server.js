@@ -155,8 +155,17 @@ app.get("/api/new-arrivals", async (req, res) => {
   }
   });
 
+//LogOut
+  app.post("/api/logout", (req, res) => {
+   try {
+      res.json({ message: "Logged out successfully" });
+    } catch (error) {
+      res.status(500).json({ error: "Server error", details: error.message });
+    }
+  });
+
    // SELLER UPLOAD PRODUCTS ROUTES 
- app.post("/api/products", authenticateSeller, async (req, res) => {
+  app.post("/api/products", authenticateSeller, async (req, res) => {
     try {
         const { name, description, price, category, image } = req.body;
 
@@ -186,8 +195,8 @@ app.get("/api/new-arrivals", async (req, res) => {
         console.error("Error uploading product:", err);
         res.status(500).json({ error: "Failed to upload product", details: err.message });
     }
-});
-app.post("/api/products/csv", authenticateSeller, upload.single("file"), async (req, res) => {
+  });
+  app.post("/api/products/csv", authenticateSeller, upload.single("file"), async (req, res) => {
   if (!req.file) {
       return res.status(400).json({ error: "No file uploaded" });
   }
@@ -229,7 +238,7 @@ app.post("/api/products/csv", authenticateSeller, upload.single("file"), async (
               res.status(500).json({ error: "Failed to upload products" });
           }
       });
-});
+   });
 // GET SELLER PRODUCTS
 // app.get('/api/products/seller', async (req, res) => {
 //   try {
