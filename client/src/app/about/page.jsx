@@ -13,7 +13,7 @@ const AboutUs = () => {
     <>
       <TopBar/>
       <Nav />
-      <section className="container mx-auto px-6 py-12 flex flex-col md:flex-row items-center">
+      <section className="container mx-auto bg-white px-6 py-12 flex flex-col md:flex-row items-center">
         {/* Left Section - Animating text */}
         <motion.div 
           className="md:w-1/2"
