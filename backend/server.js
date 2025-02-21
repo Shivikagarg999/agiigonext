@@ -1,15 +1,15 @@
-const express= require('express')
-const app= express();
-const mongoose= require('mongoose')
+const express = require("express");
+const app = express();
+const mongoose = require("mongoose");
 const User = require("./models/User");
-const cors= require('cors');
+const cors = require("cors");
 const bcrypt = require("bcryptjs");
-const Product= require('./models/Product')
-const jwt= require('jsonwebtoken')
-app.use(express.json());
-require('dotenv').config();
-const multer= require('multer');
-const upload = multer({ dest: "uploads/" });const fs = require("fs");
+const Product = require("./models/Product");
+const jwt = require("jsonwebtoken");
+require("dotenv").config();
+const multer = require("multer");
+const upload = multer({ dest: "uploads/" });
+const fs = require("fs");
 const csvParser = require("csv-parser");
 
 mongoose
@@ -17,15 +17,59 @@ mongoose
   .then(() => console.log("MongoDB Connected"))
   .catch((err) => console.error("MongoDB connection error:", err));
 
-  const corsOptions = {
-    origin: ['https://agiigo.com', 'http://localhost:3000'],
-    // origin: [ 'http://localhost:3000'],
-    methods: ['GET', 'POST'],
-    allowedHeaders: ['Content-Type', 'Authorization']
-  };
-  app.use(cors(corsOptions));
-  
- 
+// ✅ Allowed origins (includes localhost)
+const allowedOrigins = ["https://agiigo.com", "http://localhost:3000"];
+
+const corsOptions = {
+  origin: function (origin, callback) {
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error("Not allowed by CORS"));
+    }
+  },
+  methods: ["GET", "POST"],
+  allowedHeaders: ["Content-Type", "Authorization"],
+  // credentials: true,
+};
+
+// ✅ Apply CORS middleware before JSON middleware
+app.use(cors(corsOptions));
+app.use((req, res, next) => {
+  res.header("Access-Control-Allow-Credentials", "true");
+  next();
+});
+
+// ✅ Ensure every response includes required CORS headers
+app.use((req, res, next) => {
+  const requestOrigin = req.headers.origin;
+  if (allowedOrigins.includes(requestOrigin)) {
+    res.header("Access-Control-Allow-Origin", requestOrigin);
+  }
+  res.header("Access-Control-Allow-Credentials", "true");
+  res.header("Access-Control-Allow-Methods", "GET, POST");
+  res.header("Access-Control-Allow-Headers", "Content-Type, Authorization");
+  next();
+});
+
+app.use(express.json());
+
+const authenticateUser = (req, res, next) => {
+  const token = req.cookies.token; // Get JWT token from cookies
+
+  if (!token) {
+      return res.status(401).json({ error: "Unauthorized - No token provided" });
+  }
+
+  try {
+      const decoded = jwt.verify(token, process.env.JWT_SECRET);
+      req.user = decoded; // Store user data in request
+      next(); // Proceed to next middleware or route
+  } catch (err) {
+      return res.status(401).json({ error: "Unauthorized - Invalid token" });
+  }
+};
+
 const authenticateSeller = async (req, res, next) => {
   const token = req.header("Authorization");
 
@@ -164,13 +208,10 @@ app.post("/api/login", async (req, res) => {
   });
 
 //LogOut
-  app.post("/api/logout", (req, res) => {
-   try {
-      res.json({ message: "Logged out successfully" });
-    } catch (error) {
-      res.status(500).json({ error: "Server error", details: error.message });
-    }
-  });
+app.post("/api/logout", (req, res) => {
+  res.clearCookie("token", { httpOnly: true, sameSite: "strict", secure: process.env.NODE_ENV === "production" });
+  res.json({ message: "Logged out successfully" });
+});
 
    // SELLER UPLOAD PRODUCTS ROUTES 
   app.post("/api/products", authenticateSeller, async (req, res) => {

@@ -4,30 +4,8 @@ const api_url = process.env.NEXT_PUBLIC_API_URL;
 
 const Products = () => {
   const [products, setProducts] = useState([]);
-  const addToCart = async (productId, quantity = 1) => {
-    const loggedInUserId = localStorage.getItem("userId"); // Check user session
-
-    if (!loggedInUserId) {
-        window.location.href = "/login"; // Redirect to login
-        return;
-    }
-
-    try {
-        const res = await fetch('http://localhost:3000/api/cart/add', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ userId: loggedInUserId, productId, quantity })
-        });
-
-        const data = await res.json();
-        if (data.success) {
-            alert('Added to Cart');
-        } else {
-            alert(data.message);
-        }
-    } catch (error) {
-        console.error("Error adding to cart:", error);
-    }
+  const addToCart = async () => {
+    console.log("Added to cart")
 };
 
   useEffect(() => {

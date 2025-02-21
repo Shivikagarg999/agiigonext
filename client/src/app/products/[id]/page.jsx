@@ -29,21 +29,23 @@ export default function ProductDetails() {
     if (id) fetchProduct();
   }, [id]);
 
-  const addToCart = async (productId, quantity = 1) => {
+  const addToCart = async (productId) => {
     try {
         const res = await fetch("https://api.agiigo.com/api/cart/add", {
             method: "POST",
-            headers: { "Content-Type": "application/json" },
-            credentials: "include", // Ensure session authentication
-            body: JSON.stringify({ productId, quantity }),
+            headers: {
+                "Content-Type": "application/json",
+            },
+            credentials: "include", // ✅ Ensures cookies are sent
+            body: JSON.stringify({ productId, quantity: 1 }),
         });
 
-        const data = await res.json();
-        if (res.ok) {
-            alert("Item added to cart!");
-        } else {
-            alert(data.message || "Failed to add to cart.");
+        if (!res.ok) {
+            throw new Error("Failed to add to cart");
         }
+
+        const data = await res.json();
+        console.log("Cart updated:", data);
     } catch (error) {
         console.error("Error adding to cart:", error);
     }

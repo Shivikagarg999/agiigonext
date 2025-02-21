@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { Search } from "lucide-react";
 import Nav from "../nav/Nav";
 import Footer from "../footer/Footer";
+import TopBar from "../components/TopBar";
 
 export default function ProductsPage() {
   const [products, setProducts] = useState([]);
@@ -66,6 +67,7 @@ export default function ProductsPage() {
 
   return (
     <>
+      <TopBar/>
       <Nav />
       <div className="container mx-auto px-6 py-10">
         <div className="relative w-full h-auto max-h-[96vh] flex items-center justify-center overflow-hidden rounded-lg">
