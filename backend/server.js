@@ -309,42 +309,32 @@ app.post("/api/logout", (req, res) => {
 // });
 
   //Cart Routes
-  app.post('/api/cart/add', async (req, res) => {
-    try {
-        const { productId, quantity } = req.body;
-        const userId = req.user?.id || req.session?.userId; // Fetch userId from session or JWT
+ app.post("/api/cart/add", async (req, res) => {
+  try {
+      const { userId, productId, quantity } = req.body;
+      if (!userId || !productId || !quantity) {
+          return res.status(400).json({ error: "Missing required fields" });
+      }
 
-        if (!userId) {
-            return res.status(401).json({ message: 'User not authenticated' });
-        }
+      let cart = await Cart.findOne({ user: userId });
+      if (!cart) {
+          cart = new Cart({ user: userId, items: [] });
+      }
 
-        // Check if product exists
-        const product = await Product.findById(productId);
-        if (!product) return res.status(404).json({ message: 'Product not found' });
+      const productIndex = cart.items.findIndex(item => item.product.toString() === productId);
+      if (productIndex > -1) {
+          cart.items[productIndex].quantity += quantity;
+      } else {
+          cart.items.push({ product: productId, quantity });
+      }
 
-        // Check if cart exists for the user
-        let cart = await Cart.findOne({ userId });
-
-        if (!cart) {
-            cart = new Cart({ userId, items: [{ productId, quantity }] });
-        } else {
-            const itemIndex = cart.items.findIndex(item => item.productId.toString() === productId);
-            if (itemIndex > -1) {
-                cart.items[itemIndex].quantity += parseInt(quantity);
-            } else {
-                cart.items.push({ productId, quantity: parseInt(quantity) });
-            }
-        }
-
-        await cart.save();
-        res.json({ success: true, cart });
-
-    } catch (error) {
-        console.error("Add to Cart Error:", error);
-        res.status(500).json({ message: error.message });
-    }
+      await cart.save();
+      res.status(200).json({ message: "Product added to cart", cart });
+  } catch (error) {
+      console.error(error);
+      res.status(500).json({ error: "Server error" });
+  }
 });
-
 
   const PORT = 4000;
   app.listen(PORT, () => {
