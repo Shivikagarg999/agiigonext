@@ -112,14 +112,14 @@ app.post("/api/login", async (req, res) => {
           process.env.JWT_SECRET,
           { expiresIn: "7d" }
       );
-
+      console.log("Login: Token about to be set in cookie:", token);
       res.cookie("token", token, {
           httpOnly: true, 
           secure: process.env.NODE_ENV === "production" ? true : false, 
           sameSite: "strict", 
           maxAge: 7 * 24 * 60 * 60 * 1000, 
       });
-
+      console.log("Login: Cookie has been set");
       res.json({
           message: "Login successful",
           user: {
