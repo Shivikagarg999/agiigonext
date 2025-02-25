@@ -11,86 +11,179 @@ const multer = require("multer");
 const upload = multer({ dest: "uploads/" });
 const fs = require("fs");
 const csvParser = require("csv-parser");
+const crypto = require('crypto');
 
 mongoose
-  .connect("mongodb+srv://shivika:agiigo_karan@cluster0.reo6o.mongodb.net/agiigo-next")
-  .then(() => console.log("MongoDB Connected"))
-  .catch((err) => console.error("MongoDB connection error:", err));
+    .connect("mongodb+srv://shivika:agiigo_karan@cluster0.reo6o.mongodb.net/agiigo-next")
+    .then(() => console.log("MongoDB Connected"))
+    .catch((err) => console.error("MongoDB connection error:", err));
 
 // ✅ Allowed origins (includes localhost)
 const allowedOrigins = ["https://agiigo.com", "http://localhost:3000"];
 
 const corsOptions = {
-  origin: function (origin, callback) {
-    if (!origin || allowedOrigins.includes(origin)) {
-      callback(null, true);
-    } else {
-      callback(new Error("Not allowed by CORS"));
-    }
-  },
-  methods: ["GET", "POST"],
-  allowedHeaders: ["Content-Type", "Authorization"],
-  // credentials: true,
+    origin: function (origin, callback) {
+        if (!origin || allowedOrigins.includes(origin)) {
+            callback(null, true);
+        } else {
+            callback(new Error("Not allowed by CORS"));
+        }
+    },
+    methods: ["GET", "POST"],
+    allowedHeaders: ["Content-Type", "Authorization"],
+    credentials: true, // This is important for cookies
 };
 
 // ✅ Apply CORS middleware before JSON middleware
 app.use(cors(corsOptions));
-app.use((req, res, next) => {
-  res.header("Access-Control-Allow-Credentials", "true");
-  next();
-});
-
-// ✅ Ensure every response includes required CORS headers
-app.use((req, res, next) => {
-  const requestOrigin = req.headers.origin;
-  if (allowedOrigins.includes(requestOrigin)) {
-    res.header("Access-Control-Allow-Origin", requestOrigin);
-  }
-  res.header("Access-Control-Allow-Credentials", "true");
-  res.header("Access-Control-Allow-Methods", "GET, POST");
-  res.header("Access-Control-Allow-Headers", "Content-Type, Authorization");
-  next();
-});
 
 app.use(express.json());
 
-const authenticateUser = (req, res, next) => {
-  const token = req.cookies.token; // Get JWT token from cookies
+
+const authenticateBuyer = async (req, res, next) => {
+  let token = req.cookies.token || req.header("Authorization");
 
   if (!token) {
-      return res.status(401).json({ error: "Unauthorized - No token provided" });
+    return res.status(401).json({ error: "Unauthorized - No token provided" });
   }
 
   try {
-      const decoded = jwt.verify(token, process.env.JWT_SECRET);
-      req.user = decoded; // Store user data in request
-      next(); // Proceed to next middleware or route
-  } catch (err) {
-      return res.status(401).json({ error: "Unauthorized - Invalid token" });
+    if (token && token.startsWith("Bearer ")) {
+      token = token.split(" ")[1];
+    }
+
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const user = await User.findById(decoded.userId);
+
+    if (!user || user.role !== "buyer") {
+      return res.status(403).json({ error: "Access denied. Buyer only." });
+    }
+
+    req.user = user;
+    next();
+  } catch (error) {
+    return res.status(401).json({ error: "Unauthorized - Invalid token" });
   }
 };
 
 const authenticateSeller = async (req, res, next) => {
-  const token = req.header("Authorization");
+  let token = req.cookies.token || req.header("Authorization");
 
   if (!token) {
-      return res.status(401).json({ error: "No token provided" });
+    return res.status(401).json({ error: "Unauthorized - No token provided" });
   }
 
   try {
-      const decoded = jwt.verify(token.replace("Bearer ", ""), process.env.JWT_SECRET);
-      const user = await User.findById(decoded.userId);
+    if (token && token.startsWith("Bearer ")) {
+      token = token.split(" ")[1];
+    }
 
-      if (!user || user.role !== "seller") {
-          return res.status(403).json({ error: "Access denied. Seller only." });
-      }
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const user = await User.findById(decoded.userId);
 
-      req.user = user;
-      next();
+    if (!user || user.role !== "seller") {
+      return res.status(403).json({ error: "Access denied. Seller only." });
+    }
+
+    req.user = user;
+    next();
   } catch (error) {
-      res.status(401).json({ error: "Invalid token" });
+    return res.status(401).json({ error: "Unauthorized - Invalid token" });
   }
 };
+
+//Login and Signup Routes
+app.post("/api/login", async (req, res) => {
+  const { email, password } = req.body;
+
+  try {
+      const user = await User.findOne({ email });
+      if (!user) {
+          return res.status(401).json({ error: "Invalid email or password" });
+      }
+
+      const isMatch = await bcrypt.compare(password, user.password);
+      if (!isMatch) {
+          return res.status(401).json({ error: "Invalid email or password" });
+      }
+
+      const token = jwt.sign(
+          { userId: user._id, role: user.role },
+          process.env.JWT_SECRET,
+          { expiresIn: "7d" }
+      );
+
+      res.cookie("token", token, {
+          httpOnly: true, 
+          secure: process.env.NODE_ENV === "production" ? true : false, 
+          sameSite: "strict", 
+          maxAge: 7 * 24 * 60 * 60 * 1000, 
+      });
+
+      res.json({
+          message: "Login successful",
+          user: {
+              id: user._id,
+              name: user.name,
+              email: user.email,
+              role: user.role,
+          },
+          token,
+      });
+  } catch (error) {
+      console.error("Login error:", error.name, error.message);
+      res.status(500).json({ error: "Server error" });
+  }
+});
+
+//Register 
+app.post("/api/register", async (req, res) => {
+try {
+  const { name, email, role, password, contact } = req.body;
+
+  let user = await User.findOne({ email });
+  if (user) return res.status(400).json({ message: "User already exists" });
+
+  const hashedPassword = await bcrypt.hash(password, 10);
+
+  user = new User({
+    name,
+    email,
+    role,
+    password: hashedPassword,
+    contact,
+  });
+
+  await user.save();
+
+  // ✅ Generate JWT Token after registration
+  const token = jwt.sign(
+    { userId: user._id, role: user.role },
+    process.env.JWT_SECRET,
+    { expiresIn: "7d" }
+  );
+
+  // ✅ Set HTTP-only cookie
+  res.cookie("token", token, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "strict",
+    maxAge: 7 * 24 * 60 * 60 * 1000,
+  });
+
+  res.status(201).json({
+    message: "User registered successfully",
+    user: {
+      id: user._id,
+      name: user.name,
+      email: user.email,
+      role: user.role,
+    },
+  });
+} catch (error) {
+  res.status(500).json({ message: "Server error", error: error.message });
+}
+});
 
   //Product routes
   app.get("/api/products", async (req, res) => {
@@ -137,74 +230,6 @@ app.get("/api/new-arrivals", async (req, res) => {
       console.error("Error fetching product:", error);
       res.status(500).json({ message: "Server error", error });
     }
-  });
-  //Login and Signup Routes
-app.post("/api/login", async (req, res) => {
-    const { email, password } = req.body;
-
-    try {
-        const user = await User.findOne({ email });
-        if (!user) {
-            return res.status(400).json({ error: "Invalid email or password" });
-        }
-
-        const isMatch = await bcrypt.compare(password, user.password);
-        if (!isMatch) {
-            return res.status(400).json({ error: "Invalid email or password" });
-        }
-
-        const token = jwt.sign(
-            { userId: user._id, role: user.role },
-            process.env.JWT_SECRET,
-            { expiresIn: "7d" }
-        );
-
-        // ✅ Set HTTP-only cookie
-        res.cookie("token", token, {
-            httpOnly: true, // Prevents JavaScript access (XSS protection)
-            secure: process.env.NODE_ENV === "production", // Only send over HTTPS in production
-            sameSite: "strict", // Prevents CSRF attacks
-            maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
-        });
-
-        res.json({
-            user: {
-                id: user._id,
-                name: user.name,
-                email: user.email,
-                role: user.role,
-            },
-        });
-    } catch (error) {
-        console.error("Login error:", error);
-        res.status(500).json({ error: "Server error", details: error.message });
-    }
-});
-
-
-//Register 
-   app.post("/api/register", async (req, res) => {
-  try {
-    const { name, email, role, password, contact } = req.body;
-
-    let user = await User.findOne({ email });
-    if (user) return res.status(400).json({ message: "User already exists" });
-
-    const hashedPassword = await bcrypt.hash(password, 10);
-
-    user = new User({
-      name,
-      email,
-      role,
-      password: hashedPassword,
-      contact,
-    });
-
-    await user.save();
-    res.status(201).json({ message: "User registered successfully" });
-  } catch (error) {
-    res.status(500).json({ message: "Server error", error: error.message });
-  }
   });
 
 //LogOut
@@ -288,53 +313,6 @@ app.post("/api/logout", (req, res) => {
           }
       });
    });
-// GET SELLER PRODUCTS
-// app.get('/api/products/seller', async (req, res) => {
-//   try {
-//     // Ensure `req.user.id` is a valid ObjectId
-//     const userId = mongoose.Types.ObjectId(req.user.id); // Cast string to ObjectId
-
-//     // Find products by the seller's user ID
-//     const products = await Product.find({ user: userId });
-
-//     if (products.length === 0) {
-//       return res.status(404).json({ message: "No products found." });
-//     }
-
-//     return res.status(200).json({ products });
-//   } catch (error) {
-//     console.error(error);
-//     return res.status(500).json({ message: "Server error", error });
-//   }
-// });
-
-  //Cart Routes
- app.post("/api/cart/add", async (req, res) => {
-  try {
-      const { userId, productId, quantity } = req.body;
-      if (!userId || !productId || !quantity) {
-          return res.status(400).json({ error: "Missing required fields" });
-      }
-
-      let cart = await Cart.findOne({ user: userId });
-      if (!cart) {
-          cart = new Cart({ user: userId, items: [] });
-      }
-
-      const productIndex = cart.items.findIndex(item => item.product.toString() === productId);
-      if (productIndex > -1) {
-          cart.items[productIndex].quantity += quantity;
-      } else {
-          cart.items.push({ product: productId, quantity });
-      }
-
-      await cart.save();
-      res.status(200).json({ message: "Product added to cart", cart });
-  } catch (error) {
-      console.error(error);
-      res.status(500).json({ error: "Server error" });
-  }
-});
 
   const PORT = 4000;
   app.listen(PORT, () => {
