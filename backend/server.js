@@ -19,7 +19,7 @@ mongoose
     .catch((err) => console.error("MongoDB connection error:", err));
 
 // ✅ Allowed origins (includes localhost)
-const allowedOrigins = ["https://agiigo.com", "http://localhost:3000"];
+const allowedOrigins = ["https://agiigo.com","https://www.agiigo.com", "http://localhost:3000"];
 
 const corsOptions = {
     origin: function (origin, callback) {
