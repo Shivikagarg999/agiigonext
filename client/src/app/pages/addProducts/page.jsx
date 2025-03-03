@@ -1,6 +1,9 @@
 "use client";
 import { useState } from "react";
 const api_url = process.env.NEXT_PUBLIC_API_URL;
+import Cookies from 'universal-cookie'; // Import the cookies library
+
+const cookies = new Cookies(); // Initialize cookies
 
 export default function AddProduct() {
   const [formData, setFormData] = useState({
@@ -21,25 +24,45 @@ export default function AddProduct() {
     e.preventDefault();
     setMessage("");
   
-    // Get the token from localStorage (or cookies, context, etc.)
-    const token = localStorage.getItem("token");
+    // Get the user from cookies
+    const userCookie = cookies.get("user");
   
-    if (!token) {
-      setMessage("No token provided. Please log in.");
+    console.log("User retrieved from cookies:", userCookie); // Debugging
+  
+    if (!userCookie) {
+      setMessage("No user data provided. Please log in.");
       return;
     }
   
+    const user = typeof userCookie === "string" ? JSON.parse(userCookie) : userCookie;
+  
+    console.log("Parsed user data:", user);
+  
+    if (!user._id) {
+      setMessage("Invalid user data. Please log in again.");
+      return;
+    }
+  
+    // Add seller ID to form data
+    const productData = { ...formData, userId: user._id, price: Number(formData.price) };
+  
     try {
-      const response = await fetch('https://api.agiigo.com/api/products', {
+      console.log("Sending request with productData:", productData);
+  
+      const response = await fetch("https://api.agiigo.com/api/products", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "Authorization": `Bearer ${token}`, // Include the token in Authorization header
         },
-        body: JSON.stringify(formData),
+        body: JSON.stringify(productData),
       });
   
+      console.log("Response received:", response);
+  
       const data = await response.json();
+  
+      console.log("Response data:", data);
+  
       if (response.ok) {
         setMessage("Product added successfully!");
         setFormData({
@@ -53,10 +76,10 @@ export default function AddProduct() {
         setMessage(data.error || "Failed to add product.");
       }
     } catch (error) {
+      console.error("Error adding product:", error);
       setMessage("Error adding product.");
     }
-  };
-  
+  };   
 
   return (
     <>

@@ -15,7 +15,7 @@ export default function SellerProducts() {
           return;
         }
   
-        const response = await fetch('http://localhost:4000/api/products/seller', {
+        const response = await fetch('https://api.agiigo.com/api/products/seller', {
           method: "GET",
           headers: {
             "Authorization": `Bearer ${token}`,

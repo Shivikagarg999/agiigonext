@@ -8,11 +8,13 @@ import Products from "@/app/products/Products"
 import TrendingProducts from "@/app/trendingProducts/TrendingProducts"
 import FAQ from "@/app/FAQs/Faqs"
 import Footer from "@/app/footer/Footer"
+import SubNavbar from "@/app/navbelowbar/SubNavBar"
 
 export default function Buyer(){
     return (
         <>
          <Nav/>
+         <SubNavbar/>
          <Home/>
          <Products/>
          <BrowseByCategory/>

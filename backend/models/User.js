@@ -17,11 +17,7 @@ const userSchema = new mongoose.Schema({
         required: true,
         minlength: 6 
     },
-    role: {
-        type: String,
-        enum: ['buyer', 'seller'],  
-        default: 'buyer'  
-    },
+    role: { type: String, enum: ["buyer", "seller"], default: "buyer", required: true },
     contact: {
         type: String,
         required: true,

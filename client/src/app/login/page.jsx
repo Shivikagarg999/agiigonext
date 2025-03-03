@@ -1,15 +1,15 @@
 "use client";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+
 import Nav from "../nav/Nav";
 import Footer from "../footer/Footer";
-const api_url = process.env.NEXT_PUBLIC_API_URL;
 
 export default function LoginForm() {
   const router = useRouter();
   const [form, setForm] = useState({ email: "", password: "" });
   const [error, setError] = useState("");
-  const [loading, setLoading] = useState(false); // Added loading state
+  const [loading, setLoading] = useState(false);
 
   const handleChange = (e) => {
     setForm({ ...form, [e.target.name]: e.target.value });
@@ -18,34 +18,39 @@ export default function LoginForm() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
-    setLoading(true); // Start loading
+    setLoading(true);
 
     try {
-      const res = await fetch('https://api.agiigo.com/api/login', {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(form),
-      });
+        const res = await fetch("https://api.agiigo.com/api/login", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(form),
+            credentials: "include", // Backend se cookies receive karne ke liye
+        });
 
-      const data = await res.json();
-                         
-      // Check if response is not ok (e.g. invalid credentials)
-      if (!res.ok) throw new Error(data.error || "Login failed");
+        const data = await res.json();
+        console.log("Login Response:", data);
 
-      localStorage.setItem("token", data.token);
+        if (!res.ok) throw new Error(data.message || "Login failed");
 
-      // Redirect based on role
-      if (data.user.role === "buyer") {
-        router.push("/pages/buyer");
-      } else if (data.user.role === "seller") {
-        router.push("/seller");
-      }
+        // 🟠 Store user data in cookies
+        document.cookie = `user=${encodeURIComponent(JSON.stringify(data.user))}; path=/; max-age=86400`; // 1 day expiry
+
+        // Redirect based on role
+        if (data.user.role === "buyer") {
+            router.push("/pages/buyer");
+        } else if (data.user.role === "seller") {
+            router.push("/seller");
+        } else {
+            throw new Error("Invalid user role");
+        }
     } catch (err) {
-      setError(err.message); // Set the error message
+        console.error("Login Error:", err.message);
+        setError(err.message);
     } finally {
-      setLoading(false); // Stop loading when the request is complete
+        setLoading(false);
     }
-  };
+};
 
   return (
     <>
@@ -53,7 +58,7 @@ export default function LoginForm() {
       <div className="flex items-center justify-center min-h-[80vh] bg-gray-100">
         <div className="bg-white p-6 pt-10 pb-16 rounded shadow-md w-96">
           <h2 className="text-2xl font-bold mb-4 text-[#EB8426] text-center">Login</h2>
-          {error && <p className="text-red-500 text-sm">{error}</p>} {/* Error message */}
+          {error && <p className="text-red-500 text-sm">{error}</p>}
           <form onSubmit={handleSubmit}>
             <input
               type="email"
@@ -76,9 +81,9 @@ export default function LoginForm() {
             <button
               type="submit"
               className="w-full bg-[#EB8426] text-white py-2 mb-4 rounded hover:bg-orange-600"
-              disabled={loading} // Disable the button while loading
+              disabled={loading}
             >
-              {loading ? "Logging in..." : "Login"} {/* Show loading text */}
+              {loading ? "Logging in..." : "Login"}
             </button>
           </form>
           <p className="mt-2 text-black text-sm">

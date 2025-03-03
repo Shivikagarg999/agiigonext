@@ -15,7 +15,7 @@ export const metadata = {
   title: "Agiigo",
   description: "Ecommerce website Auction based",
   icons: {
-    icon: "../images/logo-icon.jpg", 
+    icon: "../images/icon-bgr.png", 
   },
 };
 

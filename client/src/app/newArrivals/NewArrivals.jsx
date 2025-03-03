@@ -37,7 +37,7 @@ const NewArrivals = () => {
                 className="w-full h-[320px] object-contain rounded-md"
               />
               <h2 className="text-lg font-semibold text-black mt-2">{product.name}</h2>
-              <p className="text-gray-700 text-xl font-bold">₹{product.price}</p>
+              <p className="text-gray-700 text-xl font-bold">{product.price}</p>
             </a>
           ))}
         </div>

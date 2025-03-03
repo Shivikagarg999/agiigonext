@@ -24,7 +24,7 @@ export default function RegisterPage() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setMessage(""); // Clear any previous message
+    setMessage(""); 
 
     try {
       const res = await fetch('https://api.agiigo.com/api/register', {
