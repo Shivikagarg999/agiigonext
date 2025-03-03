@@ -18,6 +18,13 @@ app.use(express.json());
 app.use(cookieParser());
 JWT_SECRET='5d9a573fea33f72342dc47bec8951b4bcba0ae61283ce0ee6cfa26659e0b5837'
 
+mongoose
+    .connect("mongodb+srv://shivika:agiigo_karan@cluster0.reo6o.mongodb.net/agiigo-next")
+    .then(() => console.log("MongoDB Connected"))
+    .catch((err) => console.error("MongoDB connection error:", err));
+
+// ✅ Allowed origins (includes localhost)
+
 // ✅ CORS Setup
 const allowedOrigins = ["https://agiigo.com","https://www.agiigo.com","http://localhost:3000"];
 const corsOptions = {
