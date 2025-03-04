@@ -8,6 +8,7 @@ import Home from "./home/Home";
 import Footer from "./footer/Footer";
 import FAQ from "./FAQs/Faqs";
 import TopBar from "./components/TopBar";
+import Features from "./components/Features";
 
 export default function Page() {
   return (
@@ -15,7 +16,7 @@ export default function Page() {
     <TopBar/>
     <Nav/>
     <Home/>
-    {/* <AddProduct/> */}
+    <Features/>
     <Products/>
     <BrowseByCategory/>
     <TrendingProducts/>

@@ -9,14 +9,16 @@ import TrendingProducts from "@/app/trendingProducts/TrendingProducts"
 import FAQ from "@/app/FAQs/Faqs"
 import Footer from "@/app/footer/Footer"
 import SubNavbar from "@/app/navbelowbar/SubNavBar"
+import Features from "@/app/components/Features"
 
 export default function Buyer(){
     return (
         <>
          <Nav/>
          <SubNavbar/>
+         <Features/>
          <Home/>
-         <Products/>
+         {/* <Products/> */}
          <BrowseByCategory/>
          <TrendingProducts/>
          <NewArrivals/>
