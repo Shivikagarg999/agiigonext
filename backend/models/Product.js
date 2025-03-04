@@ -16,7 +16,7 @@ const productSchema = new mongoose.Schema({
   user: { 
     type: mongoose.Schema.Types.ObjectId, 
     ref: 'User', 
-    // required: true
+    required: true
   },
   isTrending: { type: Boolean, default: false },
   reviews: [reviewSchema],  // Array of reviews

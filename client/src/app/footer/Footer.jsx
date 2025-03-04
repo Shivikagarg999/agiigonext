@@ -117,7 +117,7 @@ export default function Footer() {
       <div className="flex flex-col md:flex-row justify-between items-center text-sm px-5">
         
         {/* Left - Copyright */}
-        <p>© {new Date().getFullYear()} Your Agiigo. All rights reserved.</p>
+        <p>© {new Date().getFullYear()} Agiigo. All rights reserved.</p>
 
         {/* Right - Links */}
         <div className="flex space-x-6 mt-4 md:mt-0">

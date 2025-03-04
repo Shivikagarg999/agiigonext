@@ -175,7 +175,8 @@ app.get("/api/new-arrivals", async (req, res) => {
 // ✅ Fetch Single Product
 app.get("/api/products/:id", async (req, res) => {
   try {
-    const product = await Product.findById(req.params.id);
+    const product = await Product.findById(req.params.id).populate("user", "name email");
+
     if (!product) return res.status(404).json({ message: "Product not found" });
 
     res.json(product);
@@ -193,20 +194,27 @@ app.post("/api/products", async (req, res) => {
       return res.status(400).json({ error: "All fields are required" });
     }
 
+    // Check if the user exists
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({ error: "User not found" });
+    }
+
+    // Create the new product
     const newProduct = new Product({
       name,
       description,
       price,
       category,
       image,
-      seller: userId, // Received from frontend instead of middleware
+      user: userId, // Ensure this matches your schema field name
     });
 
+    // Save product to the database
     await newProduct.save();
 
-    await User.findByIdAndUpdate(userId, {
-      $push: { products: newProduct._id },
-    });
+    // Update the user document with the new product reference
+    await User.findByIdAndUpdate(userId, { $push: { products: newProduct._id } });
 
     res.status(201).json({ message: "Product uploaded successfully", product: newProduct });
   } catch (err) {
@@ -265,18 +273,25 @@ app.get("/api/seller-products/:sellerId", async (req, res) => {
   try {
     const { sellerId } = req.params;
 
-    const seller = await User.findById(sellerId).populate("products");
-
-    if (!seller) {
-      return res.status(404).json({ error: "Seller not found" });
+    // Ensure sellerId is a valid ObjectId
+    if (!mongoose.Types.ObjectId.isValid(sellerId)) {
+      return res.status(400).json({ error: "Invalid seller ID" });
     }
 
-    res.json(seller.products); // Send full product details
+    // Find products where 'user' field matches sellerId
+    const products = await Product.find({ user: sellerId });
+
+    if (!products || products.length === 0) {
+      return res.status(404).json({ error: "No products uploaded yet😔" });
+    }
+
+    res.json(products);
   } catch (err) {
     console.error("Error fetching seller products:", err);
     res.status(500).json({ error: "Failed to fetch seller products" });
   }
 });
+
 
 
 // ✅ Start Server
