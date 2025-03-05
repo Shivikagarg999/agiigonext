@@ -25,7 +25,7 @@ const userSchema = new mongoose.Schema({
     address: String,
     state: String,
     city: String,
-    country: String,
+    country: String, 
     pincode: Number,
     orders: [{
         type: mongoose.Schema.Types.ObjectId,

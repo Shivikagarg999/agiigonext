@@ -13,37 +13,59 @@ export default function SellerPage() {
   const router = useRouter();
 
   useEffect(() => {
-    const userData = Cookies.get("user");
+    let isMounted = true; // Prevent state updates after unmounting
 
-    if (!userData) {
-      router.replace("/login");
-      return;
-    }
+    const checkAuth = async () => {
+      try {
+        const userCookie = Cookies.get("user"); // Get user cookie
+        if (!userCookie) {
+          if (isMounted) {
+            setUser(null);
+            router.push("/login"); // Redirect if cookie is missing
+          }
+          return;
+        }
 
-    try {
-      const parsedUser = JSON.parse(userData);
-      setUser(parsedUser);
+        const response = await fetch("https://api.agiigo.com/api/seller-data", {
+          method: "GET",
+          credentials: "include",
+        });
 
-      if (parsedUser.role !== "seller") {
-        router.replace("/buyer");
+        if (response.ok) {
+          const data = await response.json();
+          if (isMounted) setUser(data.user);
+        } else {
+          if (isMounted) {
+            setUser(null);
+            router.push("/login");
+          }
+        }
+      } catch (error) {
+        console.error("Auth Error:", error);
+        if (isMounted) {
+          setUser(null);
+          router.push("/login");
+        }
+      } finally {
+        if (isMounted) setLoading(false);
       }
-    } catch (error) {
-      console.error("Error parsing user data:", error);
-      router.replace("/login");
-    } finally {
-      setLoading(false);
-    }
+    };
+
+    checkAuth();
+
+    return () => {
+      isMounted = false;
+    };
   }, [router]);
 
   if (loading) return <h1>Loading...</h1>;
 
-   //return <h1>Welcome {user?.name || "Seller"}!</h1>;
-
   return (
     <>
-      <Nav/>
-      <AddProduct/>
-      <Footer/>
+      <Nav />
+      <h1>Welcome {user?.name || "Seller"}!</h1>
+      <AddProduct />
+      <Footer />
     </>
   );
 }

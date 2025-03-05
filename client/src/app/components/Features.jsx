@@ -20,7 +20,7 @@ export default function Features() {
     return (
       <div className="flex flex-wrap justify-center gap-6 p-6">
         {features.map((feature, index) => (
-          <div key={index} className="bg-gray-100 rounded-2xl shadow-md pt-10 pb-10 pr-5 pl-5 flex items-center space-x-4 w-96">
+          <div key={index} className="bg-[#F5F6F8] rounded-2xl pt-10 pb-10 pr-5 pl-5 flex items-center space-x-4 w-96">
             <div className="flex-1">
               <h3 className="text-lg font-semibold">{feature.title}</h3>
               <p className="text-gray-600 text-sm mt-2">{feature.description}</p>

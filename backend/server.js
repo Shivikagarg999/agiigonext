@@ -23,7 +23,27 @@ mongoose
     .then(() => console.log("MongoDB Connected"))
     .catch((err) => console.error("MongoDB connection error:", err));
 
-// ✅ Allowed origins (includes localhost)
+// ✅ Authentication Middleware
+const authMiddleware = (req, res, next) => {
+  console.log("Cookies received:", req.cookies);
+
+  const userCookie = req.cookies?.user; // Get the user cookie
+
+  if (!userCookie) {
+      return res.status(401).json({ message: "Unauthorized, no token found" });
+  }
+
+  try {
+      const user = JSON.parse(userCookie); // Parse the JSON string
+      console.log("Parsed User:", user);
+
+      req.user = user; // Attach user data to request object
+      next();
+  } catch (err) {
+      console.error("Error parsing user cookie:", err.message);
+      return res.status(400).json({ message: "Invalid user cookie" });
+  }
+};
 
 // ✅ CORS Setup
 const allowedOrigins = ["https://agiigo.com","https://www.agiigo.com","http://localhost:3000"];
@@ -81,8 +101,9 @@ app.post("/api/login", async (req, res) => {
   }
 });
 app.post("/api/logout", (req, res) => {
-    res.clearCookie("user"); // Clear the user cookie
-    res.status(200).json({ message: "Logged out successfully" });
+  res.clearCookie("user", { path: "/" });
+  res.clearCookie("connect.sid", { path: "/" });
+  res.status(200).json({ message: "Logged out successfully" });
 });
 // ✅ Register Route
 app.post("/api/register", async (req, res) => {
@@ -267,33 +288,67 @@ app.post("/api/products/csv", upload.single("file"), async (req, res) => {
       }
     });
 });
-
-// SELLER MY PRODUCTS
-app.get("/api/seller-products/:sellerId", async (req, res) => {
+app.get("/api/seller-data", authMiddleware, async (req, res) => {
   try {
-    const { sellerId } = req.params;
-
-    // Ensure sellerId is a valid ObjectId
-    if (!mongoose.Types.ObjectId.isValid(sellerId)) {
-      return res.status(400).json({ error: "Invalid seller ID" });
+    // Fetch seller details only if the user is a seller
+    if (req.user.role !== "seller") {
+      return res.status(403).json({ message: "Access denied. Not a seller." });
     }
 
-    // Find products where 'user' field matches sellerId
-    const products = await Product.find({ user: sellerId });
+    const seller = await User.findById(req.user._id).select("-password"); // Fetch user as seller
 
-    if (!products || products.length === 0) {
-      return res.status(404).json({ error: "No products uploaded yet😔" });
+    if (!seller) {
+      return res.status(404).json({ message: "Seller not found" });
     }
 
-    res.json(products);
-  } catch (err) {
-    console.error("Error fetching seller products:", err);
-    res.status(500).json({ error: "Failed to fetch seller products" });
+    res.json({ user: seller });
+  } catch (error) {
+    console.error("Error fetching seller data:", error);
+    res.status(500).json({ message: "Internal Server Error" });
   }
 });
 
+app.get("/api/profile/seller", authMiddleware, async (req, res) => {
+  try {
+    // ✅ Ensure req.user._id is used instead of req.user.id
+    const user = await User.findById(req.user._id).select("-password");
 
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
 
+    res.json(user); // ✅ Send user details without password
+  } catch (error) {
+    console.error("Error fetching profile:", error);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+app.put("/api/profile/seller", authMiddleware, async (req, res) => {
+  try {
+    console.log("User ID from middleware:", req.user); // Debugging
+    
+    const userId = req.user._id || req.user.id; // Use _id if id is undefined
+
+    if (!userId) {
+      return res.status(400).json({ message: "User ID not found in request" });
+    }
+
+    const updatedUser = await User.findByIdAndUpdate(
+      userId,
+      { $set: req.body }, // Ensure safe update
+      { new: true, runValidators: true }
+    ).select("-password");
+
+    if (!updatedUser) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    res.json(updatedUser);
+  } catch (error) {
+    console.error("Error updating profile:", error);
+    res.status(500).json({ message: "Server error" });
+  }
+});
 // ✅ Start Server
 const PORT = process.env.PORT || 4000;
 app.listen(PORT, () => {

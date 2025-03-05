@@ -1,34 +1,67 @@
 "use client";
 import { useEffect, useState } from "react";
-import Cookies from "universal-cookie";
+import { useRouter } from "next/navigation";
+import Cookies from "js-cookie"; // Make sure this matches your existing Cookies import
 import Footer from "../footer/Footer";
 import Nav from "../nav/SellerNav";
 
 const sellerImage =
   "https://i.pinimg.com/236x/bd/42/8e/bd428e6bb156d90045700dbf3e967c3e.jpg";
 
-const cookies = new Cookies();
-
 export default function SellerProducts() {
   const [products, setProducts] = useState([]);
+  const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState("");
   const [selected, setSelected] = useState([]);
+  const router = useRouter();
 
   useEffect(() => {
-    const fetchProducts = async () => {
-      const userCookie = cookies.get("user");
+    let isMounted = true;
 
-      if (!userCookie || !userCookie._id) {
-        setMessage("No user data found. Please log in.");
-        setLoading(false);
-        return;
-      }
-
+    const checkAuth = async () => {
       try {
-        const res = await fetch(
-          `https://api.agiigo.com/api/seller-products/${userCookie._id}`
-        );
+        const userCookie = Cookies.get("user");
+
+        if (!userCookie) {
+          if (isMounted) {
+            setUser(null);
+            router.push("/login");
+          }
+          return;
+        }
+
+        const response = await fetch("https://api.agiigo.com/api/seller-data", {
+          method: "GET",
+          credentials: "include",
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          if (isMounted) {
+            setUser(data.user);
+            fetchProducts(data.user._id);
+          }
+        } else {
+          if (isMounted) {
+            setUser(null);
+            router.push("/login");
+          }
+        }
+      } catch (error) {
+        console.error("Auth Error:", error);
+        if (isMounted) {
+          setUser(null);
+          router.push("/login");
+        }
+      } finally {
+        if (isMounted) setLoading(false);
+      }
+    };
+
+    const fetchProducts = async (userId) => {
+      try {
+        const res = await fetch(`https://api.agiigo.com/api/seller-products/${userId}`);
         const data = await res.json();
 
         if (res.ok) {
@@ -39,19 +72,17 @@ export default function SellerProducts() {
       } catch (err) {
         console.error("Error fetching products:", err);
         setMessage("Error fetching products.");
-      } finally {
-        setLoading(false);
       }
     };
 
-    fetchProducts();
-  }, []);
+    checkAuth();
 
-  const toggleSelect = (id) => {
-    setSelected((prev) =>
-      prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]
-    );
-  };
+    return () => {
+      isMounted = false;
+    };
+  }, [router]);
+
+  if (loading) return <h1 className="text-center mt-10">Loading...</h1>;
 
   return (
     <>
@@ -69,9 +100,7 @@ export default function SellerProducts() {
             </div>
             <div>
               <h2 className="text-xl font-bold">Agiigo Seller Hub</h2>
-              <p className="text-gray-500 text-sm">
-                Sell Smarter. Grow Faster!
-              </p>
+              <p className="text-gray-500 text-sm">Sell Smarter. Grow Faster!</p>
             </div>
           </div>
         </div>
@@ -87,9 +116,7 @@ export default function SellerProducts() {
         </div>
 
         {/* Product Grid */}
-        {loading ? (
-          <p className="text-center text-gray-500">Loading products...</p>
-        ) : message ? (
+        {message ? (
           <p className="text-center text-red-600">{message}</p>
         ) : products.length === 0 ? (
           <p className="text-center text-gray-500">No products uploaded yet.</p>
@@ -101,7 +128,11 @@ export default function SellerProducts() {
                 className={`border p-4 rounded-lg shadow-md relative cursor-pointer transition-all duration-300 hover:shadow-lg ${
                   selected.includes(product._id) ? "border-blue-500" : ""
                 }`}
-                onClick={() => toggleSelect(product._id)}
+                onClick={() =>
+                  setSelected((prev) =>
+                    prev.includes(product._id) ? prev.filter((id) => id !== product._id) : [...prev, product._id]
+                  )
+                }
               >
                 {/* Selection Badge */}
                 {selected.includes(product._id) && (
@@ -117,9 +148,7 @@ export default function SellerProducts() {
 
                 {/* Product Name & Price */}
                 <div className="flex justify-between items-center mt-4">
-                  <h3 className="text-lg font-semibold truncate">
-                    {product.name}
-                  </h3>
+                  <h3 className="text-lg font-semibold truncate">{product.name}</h3>
                   <p className="text-black bg-blue-100 px-3 py-1 rounded-md font-semibold">
                     ${product.price}
                   </p>
