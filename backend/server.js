@@ -23,28 +23,6 @@ mongoose
     .then(() => console.log("MongoDB Connected"))
     .catch((err) => console.error("MongoDB connection error:", err));
 
-// ✅ Authentication Middleware
-const authMiddleware = (req, res, next) => {
-  console.log("Cookies received:", req.cookies);
-
-  const userCookie = req.cookies?.user; // Get the user cookie
-
-  if (!userCookie) {
-      return res.status(401).json({ message: "Unauthorized, no token found" });
-  }
-
-  try {
-      const user = JSON.parse(userCookie); // Parse the JSON string
-      console.log("Parsed User:", user);
-
-      req.user = user; // Attach user data to request object
-      next();
-  } catch (err) {
-      console.error("Error parsing user cookie:", err.message);
-      return res.status(400).json({ message: "Invalid user cookie" });
-  }
-};
-
 // ✅ CORS Setup
 const allowedOrigins = ["https://agiigo.com","https://www.agiigo.com","http://localhost:3000"];
 const corsOptions = {
@@ -59,52 +37,69 @@ mongoose
   .then(() => console.log("MongoDB Connected"))
   .catch((err) => console.error("MongoDB connection error:", err));
 
-app.post("/api/login", async (req, res) => {
-  const { email, password } = req.body;
+const authMiddleware = (req, res, next) => {
+  const token = req.cookies.token;
 
-  if (!email || !password) {
-      return res.status(400).json({ message: "Email and password are required" });
+  if (!token) {
+    return res.status(401).json({ message: "Unauthorized access" });
   }
 
   try {
-      // Check if user exists
-      const user = await User.findOne({ email });
-      if (!user) return res.status(400).json({ message: "Invalid credentials" });
-
-      // Compare password
-      const isMatch = await bcrypt.compare(password, user.password);
-      if (!isMatch) return res.status(400).json({ message: "Invalid credentials" });
-
-      // Generate JWT Token
-      const token = jwt.sign({ userId: user._id, role: user.role }, process.env.JWT_SECRET, { expiresIn: "7d" });
-
-      // Set token in HTTP-only cookie
-      res.cookie("token", token, {
-          httpOnly: true,
-          secure: process.env.NODE_ENV === "production",
-          sameSite: "strict",
-      });
-
-      res.status(200).json({
-          message: "Login successful",
-          user: {
-              _id: user._id,
-              name: user.name,
-              email: user.email,
-              role: user.role,
-          },
-          token,
-      });
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    req.user = decoded; // Attach user data to request
+    next();
   } catch (error) {
-      console.error("Login Error:", error);
-      res.status(500).json({ message: "Server error", error: error.message });
+    res.status(401).json({ message: "Invalid or expired token" });
   }
-});
-app.post("/api/logout", (req, res) => {
-  res.clearCookie("user", { path: "/" });
-  res.clearCookie("connect.sid", { path: "/" });
-  res.status(200).json({ message: "Logged out successfully" });
-});
+};
+
+  app.post("/api/login", async (req, res) => {
+    const { email, password } = req.body;
+  
+    if (!email || !password) {
+        return res.status(400).json({ message: "Email and password are required" });
+    }
+  
+    try {
+        // Check if user exists
+        const user = await User.findOne({ email });
+        if (!user) return res.status(400).json({ message: "Invalid credentials" });
+  
+        // Compare password
+        const isMatch = await bcrypt.compare(password, user.password);
+        if (!isMatch) return res.status(400).json({ message: "Invalid credentials" });
+  
+        // Generate JWT Token
+        const token = jwt.sign({ userId: user._id, role: user.role }, process.env.JWT_SECRET, { expiresIn: "7d" });
+  
+        // Set token in HTTP-only cookie
+        res.cookie("token", token, {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === "production",
+            sameSite: "strict",
+        });
+  
+        res.status(200).json({
+            message: "Login successful",
+            user: {
+                _id: user._id,
+                name: user.name,
+                email: user.email,
+                role: user.role,
+            },
+            token,
+        });
+    } catch (error) {
+        console.error("Login Error:", error);
+        res.status(500).json({ message: "Server error", error: error.message });
+    }
+  });
+  app.post("/api/logout", (req, res) => {
+    res.clearCookie("token", { path: "/" }); // Clear JWT token
+    res.clearCookie("user", { path: "/" });  // Clear user info if stored in cookies
+  
+    res.status(200).json({ message: "Logged out successfully" });
+  });    
 // ✅ Register Route
 app.post("/api/register", async (req, res) => {
   const { name, email, password, contact, role } = req.body;
@@ -288,67 +283,77 @@ app.post("/api/products/csv", upload.single("file"), async (req, res) => {
       }
     });
 });
-app.get("/api/seller-data", authMiddleware, async (req, res) => {
+app.get("/api/user", async (req, res) => {
   try {
-    // Fetch seller details only if the user is a seller
-    if (req.user.role !== "seller") {
-      return res.status(403).json({ message: "Access denied. Not a seller." });
-    }
+    const token = req.headers.authorization?.split(" ")[1];
+    if (!token) return res.status(401).json({ message: "Unauthorized" });
 
-    const seller = await User.findById(req.user._id).select("-password"); // Fetch user as seller
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const user = await User.findById(decoded.userId).select("-password");
 
-    if (!seller) {
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    res.status(200).json({ user });
+  } catch (error) {
+    console.error("User Fetch Error:", error);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+//seller products
+app.get("/api/seller-products/:sellerId", async (req, res) => {
+  try {
+      const { sellerId } = req.params;
+      const seller = await User.findById(sellerId).populate("products"); 
+
+      if (!seller || !seller.products.length) {
+          return res.status(404).json({ message: "No products uploaded yet" });
+      }
+
+      res.status(200).json(seller.products);
+  } catch (error) {
+      res.status(500).json({ message: "Server error", error: error.message });
+  }
+});
+// ✅ Get Seller Profile
+app.get("/api/profile/seller/:sellerId", async (req, res) => {
+  try {
+    const { sellerId } = req.params;
+    const seller = await User.findById(sellerId).select("-password");
+
+    if (!seller || seller.role !== "seller") {
       return res.status(404).json({ message: "Seller not found" });
     }
 
-    res.json({ user: seller });
+    res.status(200).json(seller);
   } catch (error) {
-    console.error("Error fetching seller data:", error);
-    res.status(500).json({ message: "Internal Server Error" });
+    console.error("Error fetching seller profile:", error);
+    res.status(500).json({ message: "Server error", error: error.message });
   }
 });
-
-app.get("/api/profile/seller", authMiddleware, async (req, res) => {
+// ✅ Update Seller Profile
+app.put("/api/profile/seller/:sellerId", async (req, res) => {
   try {
-    // ✅ Ensure req.user._id is used instead of req.user.id
-    const user = await User.findById(req.user._id).select("-password");
+    const { sellerId } = req.params;
+    const { name, contact, address, state, city, country, pincode } = req.body;
 
-    if (!user) {
-      return res.status(404).json({ message: "User not found" });
-    }
-
-    res.json(user); // ✅ Send user details without password
-  } catch (error) {
-    console.error("Error fetching profile:", error);
-    res.status(500).json({ message: "Server error" });
-  }
-});
-app.put("/api/profile/seller", authMiddleware, async (req, res) => {
-  try {
-    console.log("User ID from middleware:", req.user); // Debugging
-    
-    const userId = req.user._id || req.user.id; // Use _id if id is undefined
-
-    if (!userId) {
-      return res.status(400).json({ message: "User ID not found in request" });
-    }
-
-    const updatedUser = await User.findByIdAndUpdate(
-      userId,
-      { $set: req.body }, // Ensure safe update
+    const updatedSeller = await User.findByIdAndUpdate(
+      sellerId,
+      { $set: { name, contact, address, state, city, country, pincode } },
       { new: true, runValidators: true }
     ).select("-password");
 
-    if (!updatedUser) {
-      return res.status(404).json({ message: "User not found" });
+    if (!updatedSeller) {
+      return res.status(404).json({ message: "Seller not found" });
     }
 
-    res.json(updatedUser);
+    res.status(200).json(updatedSeller);
   } catch (error) {
-    console.error("Error updating profile:", error);
-    res.status(500).json({ message: "Server error" });
+    console.error("Error updating seller profile:", error);
+    res.status(500).json({ message: "Server error", error: error.message });
   }
 });
+
 // ✅ Start Server
 const PORT = process.env.PORT || 4000;
 app.listen(PORT, () => {

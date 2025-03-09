@@ -1,7 +1,8 @@
 "use client";
+
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import Cookies from "js-cookie"; // Make sure this matches your existing Cookies import
+import Cookies from "js-cookie";
 import Footer from "../footer/Footer";
 import Nav from "../nav/SellerNav";
 
@@ -10,79 +11,46 @@ const sellerImage =
 
 export default function SellerProducts() {
   const [products, setProducts] = useState([]);
-  const [user, setUser] = useState(null);
-  const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState("");
   const [selected, setSelected] = useState([]);
+  const [user, setUser] = useState(null);
+  const [loading, setLoading] = useState(true);
   const router = useRouter();
 
+  // Fetch Products Function
+  const fetchProducts = async (userId) => {
+    try {
+      const res = await fetch(`https://api.agiigo.com/api/seller-products/${userId}`);
+      const data = await res.json();
+
+      if (res.ok) {
+        setProducts(data);
+      } else {
+        setMessage(data.error || "Failed to load products.");
+      }
+    } catch (err) {
+      console.error("Error fetching products:", err);
+      setMessage("Error fetching products.");
+    }
+  };
+
+  // Fetch user data from cookies and get seller products
   useEffect(() => {
-    let isMounted = true;
+    const token = Cookies.get("token");
+    const userData = Cookies.get("user");
 
-    const checkAuth = async () => {
-      try {
-        const userCookie = Cookies.get("user");
+    if (!token || !userData) {
+      router.push("/login"); // Redirect if user not logged in
+      return;
+    }
 
-        if (!userCookie) {
-          if (isMounted) {
-            setUser(null);
-            router.push("/login");
-          }
-          return;
-        }
-
-        const response = await fetch("https://api.agiigo.com/api/seller-data", {
-          method: "GET",
-          credentials: "include",
-        });
-
-        if (response.ok) {
-          const data = await response.json();
-          if (isMounted) {
-            setUser(data.user);
-            fetchProducts(data.user._id);
-          }
-        } else {
-          if (isMounted) {
-            setUser(null);
-            router.push("/login");
-          }
-        }
-      } catch (error) {
-        console.error("Auth Error:", error);
-        if (isMounted) {
-          setUser(null);
-          router.push("/login");
-        }
-      } finally {
-        if (isMounted) setLoading(false);
-      }
-    };
-
-    const fetchProducts = async (userId) => {
-      try {
-        const res = await fetch(`https://api.agiigo.com/api/seller-products/${userId}`);
-        const data = await res.json();
-
-        if (res.ok) {
-          setProducts(data);
-        } else {
-          setMessage(data.error || "Failed to load products.");
-        }
-      } catch (err) {
-        console.error("Error fetching products:", err);
-        setMessage("Error fetching products.");
-      }
-    };
-
-    checkAuth();
-
-    return () => {
-      isMounted = false;
-    };
+    const parsedUser = JSON.parse(userData);
+    setUser(parsedUser);
+    fetchProducts(parsedUser._id); // Call API with seller's user ID
+    setLoading(false);
   }, [router]);
 
-  if (loading) return <h1 className="text-center mt-10">Loading...</h1>;
+  if (loading) return <p>Loading...</p>;
 
   return (
     <>
@@ -99,7 +67,7 @@ export default function SellerProducts() {
               />
             </div>
             <div>
-              <h2 className="text-xl font-bold">Agiigo Seller Hub</h2>
+              <h2 className="text-xl font-bold">{user?.name || "Agiigo Seller Hub"}</h2>
               <p className="text-gray-500 text-sm">Sell Smarter. Grow Faster!</p>
             </div>
           </div>

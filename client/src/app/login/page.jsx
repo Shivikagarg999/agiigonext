@@ -25,7 +25,7 @@ export default function LoginForm() {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify(form),
-            credentials: "include", // Backend se cookies receive karne ke liye
+            credentials: "include", // 🟠 Allow receiving cookies from the backend
         });
 
         const data = await res.json();
@@ -33,8 +33,9 @@ export default function LoginForm() {
 
         if (!res.ok) throw new Error(data.message || "Login failed");
 
-        // 🟠 Store user data in cookies
-        document.cookie = `user=${encodeURIComponent(JSON.stringify(data.user))}; path=/; max-age=86400`; // 1 day expiry
+        // ✅ Store token and user data in cookies
+        document.cookie = `token=${data.token}; path=/; max-age=86400`; // Store token for 1 day
+        document.cookie = `user=${encodeURIComponent(JSON.stringify(data.user))}; path=/; max-age=86400`;
 
         // Redirect based on role
         if (data.user.role === "buyer") {
@@ -51,6 +52,7 @@ export default function LoginForm() {
         setLoading(false);
     }
 };
+
 
   return (
     <>

@@ -1,8 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import Cookies from "js-cookie";
 import { useRouter } from "next/navigation";
+import Cookies from "js-cookie";
 import Nav from "../nav/SellerNav";
 import AddProduct from "../pages/addProducts/page";
 import Footer from "../footer/Footer";
@@ -13,52 +13,30 @@ export default function SellerPage() {
   const router = useRouter();
 
   useEffect(() => {
-    let isMounted = true; // Prevent state updates after unmounting
+    const token = Cookies.get("token"); // Check if token exists
+    const userData = Cookies.get("user");
 
-    const checkAuth = async () => {
-      try {
-        const userCookie = Cookies.get("user"); // Get user cookie
-        if (!userCookie) {
-          if (isMounted) {
-            setUser(null);
-            router.push("/login"); // Redirect if cookie is missing
-          }
-          return;
-        }
+    console.log("Token:", token);
+    console.log("User Data:", userData);
 
-        const response = await fetch("https://api.agiigo.com/api/seller-data", {
-          method: "GET",
-          credentials: "include",
-        });
+    if (!token || !userData) {
+      router.push("/login");
+      return;
+    }
 
-        if (response.ok) {
-          const data = await response.json();
-          if (isMounted) setUser(data.user);
-        } else {
-          if (isMounted) {
-            setUser(null);
-            router.push("/login");
-          }
-        }
-      } catch (error) {
-        console.error("Auth Error:", error);
-        if (isMounted) {
-          setUser(null);
-          router.push("/login");
-        }
-      } finally {
-        if (isMounted) setLoading(false);
-      }
-    };
+    try {
+      setUser(JSON.parse(userData)); // Parse user data safely
+    } catch (error) {
+      console.error("Error parsing user data:", error);
+      Cookies.remove("user"); // Remove corrupted cookie
+      router.push("/login");
+      return;
+    }
 
-    checkAuth();
-
-    return () => {
-      isMounted = false;
-    };
+    setLoading(false);
   }, [router]);
 
-  if (loading) return <h1>Loading...</h1>;
+  if (loading) return <p>Loading...</p>;
 
   return (
     <>
