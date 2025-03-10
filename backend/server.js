@@ -12,6 +12,7 @@ const csvParser = require("csv-parser");
 const cookieParser = require("cookie-parser");
 const crypto = require("crypto")
 const jwt = require("jsonwebtoken");
+const ImageKit = require("imagekit");
 
 // Middleware
 app.use(express.json());
@@ -201,13 +202,24 @@ app.get("/api/products/:id", async (req, res) => {
     res.status(500).json({ message: "Server error", error });
   }
 });
-// ✅ Seller Upload Products Route
-app.post("/api/products", async (req, res) => {
-  try {
-    const { name, description, price, category, image, userId } = req.body;
 
-    if (!name || !description || !price || !category || !userId) {
-      return res.status(400).json({ error: "All fields are required" });
+// ✅ Seller Upload Products Route
+
+const storage = multer.memoryStorage(); 
+const upload = multer({ storage });
+
+const imagekit = new ImageKit({
+  publicKey: process.env.IMAGEKIT_PUBLIC_KEY,
+  privateKey: process.env.IMAGEKIT_PRIVATE_KEY,
+  urlEndpoint: process.env.IMAGEKIT_URL_ENDPOINT,
+});
+
+app.post("/api/products", upload.single("image"), async (req, res) => {
+  try {
+    const { name, description, price, category, userId } = req.body;
+
+    if (!name || !description || !price || !category || !userId || !req.file) {
+      return res.status(400).json({ error: "All fields are required, including an image" });
     }
 
     // Check if the user exists
@@ -216,14 +228,21 @@ app.post("/api/products", async (req, res) => {
       return res.status(404).json({ error: "User not found" });
     }
 
+    // Upload image to ImageKit
+    const uploadedImage = await imagekit.upload({
+      file: req.file.buffer.toString("base64"), // Convert buffer to base64
+      fileName: req.file.originalname,
+      folder: "/products",
+    });
+
     // Create the new product
     const newProduct = new Product({
       name,
       description,
       price,
       category,
-      image,
-      user: userId, // Ensure this matches your schema field name
+      image: uploadedImage.url, // Store ImageKit URL
+      user: userId,
     });
 
     // Save product to the database
@@ -237,51 +256,6 @@ app.post("/api/products", async (req, res) => {
     console.error("Error uploading product:", err);
     res.status(500).json({ error: "Failed to upload product", details: err.message });
   }
-});
-// ✅ CSV Product Upload Route
-const upload = multer({ dest: "uploads/" });
-
-app.post("/api/products/csv", upload.single("file"), async (req, res) => {
-  if (!req.file) {
-    return res.status(400).json({ error: "No file uploaded" });
-  }
-
-  const results = [];
-
-  fs.createReadStream(req.file.path)
-    .pipe(csvParser())
-    .on("data", (row) => {
-      const { name, description, price, category, image } = row;
-      if (name && description && price && category) {
-        results.push({
-          name,
-          description,
-          price: parseFloat(price),
-          category,
-          image,
-          seller: req.user.userId, // Attach seller ID
-        });
-      }
-    })
-    .on("end", async () => {
-      try {
-        const products = await Product.insertMany(results);
-
-        await User.findByIdAndUpdate(req.user.userId, {
-          $push: { products: { $each: products.map((p) => p._id) } },
-        });
-
-        fs.unlinkSync(req.file.path);
-
-        res.status(201).json({
-          message: `${products.length} products added successfully!`,
-          products,
-        });
-      } catch (err) {
-        console.error("CSV Upload Error:", err);
-        res.status(500).json({ error: "Failed to upload products" });
-      }
-    });
 });
 app.get("/api/user", async (req, res) => {
   try {
@@ -299,7 +273,6 @@ app.get("/api/user", async (req, res) => {
     res.status(500).json({ message: "Server error" });
   }
 });
-
 //seller products
 app.get("/api/seller-products/:sellerId", async (req, res) => {
   try {

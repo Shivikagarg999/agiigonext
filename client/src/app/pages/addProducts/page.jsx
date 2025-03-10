@@ -1,9 +1,8 @@
 "use client";
 import { useState } from "react";
-const api_url = process.env.NEXT_PUBLIC_API_URL;
-import Cookies from 'universal-cookie'; // Import the cookies library
+import Cookies from "universal-cookie";
 
-const cookies = new Cookies(); // Initialize cookies
+const cookies = new Cookies();
 
 export default function AddProduct() {
   const [formData, setFormData] = useState({
@@ -11,58 +10,52 @@ export default function AddProduct() {
     description: "",
     price: "",
     category: "",
-    image: "",
+    image: "", // This will store the ImageKit URL after upload
   });
 
   const [message, setMessage] = useState("");
+  const [imageFile, setImageFile] = useState(null); // Store the selected file
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
+  };
+
+  const handleImageChange = (e) => {
+    setImageFile(e.target.files[0]); // Store the selected image file
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setMessage("");
   
-    // Get the user from cookies
     const userCookie = cookies.get("user");
-  
-    console.log("User retrieved from cookies:", userCookie); // Debugging
-  
     if (!userCookie) {
       setMessage("No user data provided. Please log in.");
       return;
     }
   
     const user = typeof userCookie === "string" ? JSON.parse(userCookie) : userCookie;
-  
-    console.log("Parsed user data:", user);
-  
     if (!user._id) {
       setMessage("Invalid user data. Please log in again.");
       return;
     }
   
-    // Add seller ID to form data
-    const productData = { ...formData, userId: user._id, price: Number(formData.price) };
+    // Use FormData to send the file
+    const formDataObj = new FormData();
+    formDataObj.append("name", formData.name);
+    formDataObj.append("description", formData.description);
+    formDataObj.append("price", formData.price);
+    formDataObj.append("category", formData.category);
+    formDataObj.append("userId", user._id);
+    formDataObj.append("image", formData.image); // Make sure this is a File object
   
     try {
-      console.log("Sending request with productData:", productData);
-  
       const response = await fetch("https://api.agiigo.com/api/products", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(productData),
+        body: formDataObj,
       });
   
-      console.log("Response received:", response);
-  
       const data = await response.json();
-  
-      console.log("Response data:", data);
-  
       if (response.ok) {
         setMessage("Product added successfully!");
         setFormData({
@@ -79,28 +72,21 @@ export default function AddProduct() {
       console.error("Error adding product:", error);
       setMessage("Error adding product.");
     }
-  };   
+  };  
 
   return (
-    <>
     <div className="max-w-lg mx-auto p-8 bg-white shadow-lg rounded-lg border-2 border-orange-400 mb-8 mt-8">
       <h2 className="text-3xl font-semibold text-center text-orange-600 mb-6">Add a New Product</h2>
-      
+
       {message && (
-        <p
-          className={`text-center ${
-            message.includes("successfully") ? "text-green-600" : "text-red-600"
-          }`}
-        >
+        <p className={`text-center ${message.includes("successfully") ? "text-green-600" : "text-red-600"}`}>
           {message}
         </p>
       )}
 
       <form onSubmit={handleSubmit} className="space-y-6">
         <div>
-          <label htmlFor="name" className="block text-sm font-medium text-gray-700">
-            Product Name
-          </label>
+          <label htmlFor="name" className="block text-sm font-medium text-gray-700">Product Name</label>
           <input
             type="text"
             name="name"
@@ -113,9 +99,7 @@ export default function AddProduct() {
         </div>
 
         <div>
-          <label htmlFor="description" className="block text-sm font-medium text-gray-700">
-            Product Description
-          </label>
+          <label htmlFor="description" className="block text-sm font-medium text-gray-700">Product Description</label>
           <textarea
             name="description"
             placeholder="Enter product description"
@@ -127,9 +111,7 @@ export default function AddProduct() {
         </div>
 
         <div>
-          <label htmlFor="price" className="block text-sm font-medium text-gray-700">
-            Price
-          </label>
+          <label htmlFor="price" className="block text-sm font-medium text-gray-700">Price</label>
           <input
             type="number"
             name="price"
@@ -142,9 +124,7 @@ export default function AddProduct() {
         </div>
 
         <div>
-          <label htmlFor="category" className="block text-sm font-medium text-gray-700">
-            Category
-          </label>
+          <label htmlFor="category" className="block text-sm font-medium text-gray-700">Category</label>
           <input
             type="text"
             name="category"
@@ -157,18 +137,19 @@ export default function AddProduct() {
         </div>
 
         <div>
-          <label htmlFor="image" className="block text-sm font-medium text-gray-700">
-            Image URL
-          </label>
-          <input
-            type="text"
-            name="image"
-            placeholder="Enter image URL"
-            value={formData.image}
-            onChange={handleChange}
-            className="mt-2 w-full p-3 border border-orange-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-400"
-          />
-        </div>
+  <label htmlFor="image" className="block text-sm font-medium text-gray-700">
+    Upload Image
+  </label>
+  <input
+    type="file"
+    name="image"
+    accept="image/*"
+    onChange={(e) => setFormData({ ...formData, image: e.target.files[0] })}
+    className="mt-2 w-full p-3 border border-orange-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-400"
+    required
+  />
+</div>
+
 
         <div className="flex justify-center">
           <button
@@ -180,6 +161,5 @@ export default function AddProduct() {
         </div>
       </form>
     </div>
-    </>
   );
 }
