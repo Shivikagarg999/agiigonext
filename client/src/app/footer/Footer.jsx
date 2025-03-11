@@ -91,7 +91,7 @@ export default function Footer() {
     href="tel:+971588588466" 
     className="text-[13px] transition-all duration-300 hover:text-[#EB8426] p-1 rounded"
   >
-    +971 588 588 466
+    +97158572631
   </a>
 </div>
 

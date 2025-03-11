@@ -192,7 +192,7 @@ app.get("/api/new-arrivals", async (req, res) => {
 // ✅ Fetch Single Product
 app.get("/api/products/:id", async (req, res) => {
   try {
-    const product = await Product.findById(req.params.id).populate("user", "name email");
+    const product = await Product.findById(req.params.id).populate("user", "name email pfp");
 
     if (!product) return res.status(404).json({ message: "Product not found" });
 

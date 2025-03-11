@@ -3,6 +3,7 @@ import { useState, useEffect } from "react";
 import { useParams } from "next/navigation";
 import Nav from "@/app/nav/Nav";
 import Footer from "@/app/footer/Footer";
+import Link from "next/link";
 
 export default function ProductDetails() {
   const { id } = useParams();
@@ -14,7 +15,7 @@ export default function ProductDetails() {
   useEffect(() => {
     async function fetchProduct() {
       try {
-        const res = await fetch(`https://api.agiigo.com/api/products/${id}`);
+        const res = await fetch(`http://localhost:4000/api/products/${id}`);
         if (!res.ok) throw new Error("Failed to fetch product details");
 
         const data = await res.json();
@@ -108,20 +109,26 @@ export default function ProductDetails() {
               </div>
             </div>
 
-            {/* Seller Details */}
-            {product.user && (
-              <div className="p-4 border rounded-lg bg-gray-50">
-                <h3 className="text-lg font-semibold text-gray-800">
-                  Seller Information
-                </h3>
-                <p className="text-gray-600">
-                  <strong>Name:</strong> {product.user.name}
-                </p>
-                <p className="text-gray-600">
-                  <strong>Email:</strong> {product.user.email}
-                </p>
-              </div>
-            )}
+           
+{/* Seller Details */}
+{product.user && (
+  <div className="p-4 border rounded-lg flex items-center gap-4">
+    {product.user.pfp && (
+      <img
+        src={product.user.pfp}
+        alt={product.user.name}
+        className="w-20 h-20 rounded-full object-cover"
+      />
+    )}
+    <div>
+      <h3 className="text-lg font-semibold text-gray-800">Seller</h3>
+      <Link href={`/seller/${product.user._id}`} className="text-blue-600 hover:underline">
+        {product.user.name}
+      </Link>
+    </div>
+  </div>
+)}
+
 
             {/* Buttons */}
             <div className="flex flex-col sm:flex-row gap-4">
