@@ -13,6 +13,8 @@ export default function SellerProfile() {
     const [editing, setEditing] = useState(false);
     const [formData, setFormData] = useState({});
     const [loading, setLoading] = useState(true);
+    const [imageFile, setImageFile] = useState(null);
+    const [imagePreview, setImagePreview] = useState(null);
     
     useEffect(() => {
         const token = Cookies.get("token");
@@ -41,6 +43,7 @@ export default function SellerProfile() {
                 const data = await response.json();
                 setSellerData(data);
                 setFormData(data);
+                setImagePreview(data.pfp || null);
             } catch (error) {
                 console.error("Error fetching seller data:", error);
             } finally {
@@ -55,21 +58,41 @@ export default function SellerProfile() {
         setFormData({ ...formData, [e.target.name]: e.target.value });
     };
 
+    const handleImageChange = (e) => {
+        const file = e.target.files[0];
+        if (file) {
+            setImageFile(file);
+            const reader = new FileReader();
+            reader.onload = () => setImagePreview(reader.result);
+            reader.readAsDataURL(file);
+        }
+    };
+
     const handleSave = async () => {
         try {
             const token = Cookies.get("token");
+            const formDataToSend = new FormData();
+
+            // Append text fields
+            Object.keys(formData).forEach((key) => {
+                formDataToSend.append(key, formData[key]);
+            });
+
+            // Append image file if changed
+            if (imageFile) {
+                formDataToSend.append("pfp", imageFile);
+            }
+
             const response = await fetch(`https://api.agiigo.com/api/profile/seller/${id}`, {
                 method: "PUT",
-                headers: { 
-                    "Content-Type": "application/json",
-                    Authorization: `Bearer ${token}`,
-                },
-                body: JSON.stringify(formData),
+                headers: { Authorization: `Bearer ${token}` }, // No "Content-Type" for FormData
+                body: formDataToSend,
             });
 
             if (!response.ok) throw new Error("Failed to update profile");
 
-            setSellerData(formData);
+            const updatedData = await response.json();
+            setSellerData(updatedData);
             setEditing(false);
         } catch (error) {
             console.error("Error updating profile:", error);
@@ -109,6 +132,20 @@ export default function SellerProfile() {
                 </div>
 
                 <h1 className="text-2xl font-bold text-gray-800 mb-4">Seller Profile</h1>
+
+                {/* Profile Picture */}
+                <div className="flex flex-col items-center">
+                    {imagePreview ? (
+                        <img src={imagePreview} alt="Profile" className="w-38 h-38 rounded-full object-cover mb-4" />
+                    ) : (
+                        <div className="w-32 h-32 rounded-full bg-gray-300 flex items-center justify-center mb-4">
+                            <span className="text-gray-600">No Image</span>
+                        </div>
+                    )}
+                    {editing && (
+                        <input type="file" accept="image/*" onChange={handleImageChange} className="mb-4" />
+                    )}
+                </div>
 
                 <div className="space-y-4">
                     {["name", "email", "contact", "address", "state", "city", "country", "pincode"].map((field) => (

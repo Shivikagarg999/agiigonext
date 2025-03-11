@@ -304,27 +304,39 @@ app.get("/api/profile/seller/:sellerId", async (req, res) => {
     res.status(500).json({ message: "Server error", error: error.message });
   }
 });
-// ✅ Update Seller Profile
-app.put("/api/profile/seller/:sellerId", async (req, res) => {
-  try {
-    const { sellerId } = req.params;
-    const { name, contact, address, state, city, country, pincode } = req.body;
+// UPDATE SELLER PROFILE
+app.put("/api/profile/seller/:sellerId", upload.single("pfp"), async (req, res) => {
+    try {
+        const { sellerId } = req.params;
+        const { name, contact, address, state, city, country, pincode } = req.body;
 
-    const updatedSeller = await User.findByIdAndUpdate(
-      sellerId,
-      { $set: { name, contact, address, state, city, country, pincode } },
-      { new: true, runValidators: true }
-    ).select("-password");
+        let updateData = { name, contact, address, state, city, country, pincode };
 
-    if (!updatedSeller) {
-      return res.status(404).json({ message: "Seller not found" });
+        // Upload Image to ImageKit if file exists
+        if (req.file) {
+            const uploadResponse = await imagekit.upload({
+                file: req.file.buffer,
+                fileName: `seller_${sellerId}.jpg`,
+                folder: "/sellers",
+            });
+            updateData.pfp = uploadResponse.url; // Save the uploaded image URL
+        }
+
+        const updatedSeller = await User.findByIdAndUpdate(
+            sellerId,
+            { $set: updateData },
+            { new: true, runValidators: true }
+        ).select("-password");
+
+        if (!updatedSeller) {
+            return res.status(404).json({ message: "Seller not found" });
+        }
+
+        res.status(200).json(updatedSeller);
+    } catch (error) {
+        console.error("Error updating seller profile:", error);
+        res.status(500).json({ message: "Server error", error: error.message });
     }
-
-    res.status(200).json(updatedSeller);
-  } catch (error) {
-    console.error("Error updating seller profile:", error);
-    res.status(500).json({ message: "Server error", error: error.message });
-  }
 });
 
 // ✅ Start Server

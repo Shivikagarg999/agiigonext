@@ -22,6 +22,7 @@ const userSchema = new mongoose.Schema({
         type: String,
         required: true,
     },
+    pfp: String,
     address: String,
     state: String,
     city: String,
