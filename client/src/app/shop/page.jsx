@@ -1,13 +1,13 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { Search, ChevronDown, ChevronUp } from "lucide-react";
 import Nav from "../nav/Nav";
 import Footer from "../footer/Footer";
 import TopBar from "../components/TopBar";
 
-export default function ProductsPage() {
+function ProductsContent() {
   const [products, setProducts] = useState([]);
   const [categories, setCategories] = useState([]);
   const [filteredProducts, setFilteredProducts] = useState([]);
@@ -191,5 +191,13 @@ export default function ProductsPage() {
       </div>
       <Footer />
     </>
+  );
+}
+
+export default function ProductsPage() {
+  return (
+    <Suspense fallback={<p>Loading...</p>}>
+      <ProductsContent />
+    </Suspense>
   );
 }
