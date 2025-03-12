@@ -15,10 +15,10 @@ export default function Buyer(){
     return (
         <>
          <Nav/>
-         <SubNavbar/>
-         <Features/>
+         {/* <SubNavbar/> */}
          <Home/>
-         {/* <Products/> */}
+         <Features/>
+         <Products/>
          <BrowseByCategory/>
          <TrendingProducts/>
          <NewArrivals/>

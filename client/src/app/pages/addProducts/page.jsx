@@ -124,17 +124,54 @@ export default function AddProduct() {
         </div>
 
         <div>
-          <label htmlFor="category" className="block text-sm font-medium text-gray-700">Category</label>
-          <input
-            type="text"
-            name="category"
-            placeholder="Enter product category"
-            value={formData.category}
-            onChange={handleChange}
-            className="mt-2 w-full p-3 border border-orange-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-400"
-            required
-          />
-        </div>
+  <label htmlFor="category" className="block text-sm font-medium text-gray-700">
+    Category
+  </label>
+  <select
+    name="category"
+    value={formData.category}
+    onChange={handleChange}
+    className="mt-2 w-full p-3 border border-orange-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-400"
+    required
+  >
+    <option value="" disabled>Select a category</option>
+    <option value="electronics">Electronics</option>
+    <option value="fashion">Fashion</option>
+    <option value="home-appliances">Home Appliances</option>
+    <option value="books">Books</option>
+    <option value="beauty">Beauty</option>
+    <option value="sports">Sports</option>
+    <option value="toys">Toys & Games</option>
+    <option value="groceries">Groceries</option>
+    <option value="automobiles">Automobiles</option>
+    <option value="furniture">Furniture</option>
+    <option value="healthcare">Healthcare</option>
+    <option value="pet-supplies">Pet Supplies</option>
+    <option value="stationery">Stationery</option>
+    <option value="jewelry">Jewelry</option>
+    <option value="mobile-accessories">Mobile Accessories</option>
+    <option value="laptops">Laptops & Computers</option>
+    <option value="smartphones">Smartphones</option>
+    <option value="kitchen-appliances">Kitchen Appliances</option>
+    <option value="home-decor">Home Decor</option>
+    <option value="baby-products">Baby Products</option>
+    <option value="gaming">Gaming & Consoles</option>
+    <option value="music">Music & Instruments</option>
+    <option value="movies">Movies & Entertainment</option>
+    <option value="outdoor">Outdoor & Camping</option>
+    <option value="footwear">Footwear</option>
+    <option value="watches">Watches</option>
+    <option value="handbags">Handbags & Accessories</option>
+    <option value="tools">Tools & Hardware</option>
+    <option value="office-supplies">Office Supplies</option>
+    <option value="pharmacy">Pharmacy & Wellness</option>
+    <option value="art-supplies">Art Supplies</option>
+    <option value="collectibles">Collectibles & Antiques</option>
+    <option value="luxury">Luxury Items</option>
+    <option value="subscription-boxes">Subscription Boxes</option>
+    <option value="other">Other</option>
+  </select>
+</div>
 
         <div>
   <label htmlFor="image" className="block text-sm font-medium text-gray-700">

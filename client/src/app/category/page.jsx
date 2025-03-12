@@ -1,69 +1,75 @@
 "use client";
-import { useState } from "react";
-import { ChevronLeft, ChevronRight } from "lucide-react";
 
-const categories = [
-  { name: "Electronics", image: "/images/elec.jpg", link: "/electronics" },
-  { name: "Fashion", image: "/images/fash.jpg", link: "/fashion" },
-  { name: "Groceries", image: "/images/groc.jpg", link: "/groceries" },
-  { name: "Home Appliance", image: "/images/homea.jpg", link: "/home-appliance" },
-  { name: "Furniture", image: "/images/furn.jpg", link: "/furniture" },
-  { name: "Beauty", image: "/images/beau.jpg", link: "/beauty" },
-  { name: "Books", image: "/images/books.jpg", link: "/books" },
-];
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 
-const BrowseByCategory = () => {
-  const scrollAmount = 250;
+export default function BrowseByCategory() {
+  const [categories, setCategories] = useState([]);
+  const router = useRouter();
 
-  const handleScroll = (direction) => {
-    const container = document.getElementById("category-slider");
-    container.scrollLeft += direction === "left" ? -scrollAmount : scrollAmount;
+  useEffect(() => {
+    async function fetchCategories() {
+      try {
+        const res = await fetch("https://api.agiigo.com/api/products", {
+          cache: "no-store",
+        });
+
+        if (!res.ok) {
+          throw new Error("Failed to fetch categories");
+        }
+
+        const data = await res.json();
+        let uniqueCategories = [...new Set(data.map((product) => product.category))];
+
+        // Limit to 6 categories (fits 2 rows max on mobile)
+        uniqueCategories = uniqueCategories.sort(() => 0.5 - Math.random()).slice(0, 6);
+
+        // Assign a random product image for each category
+        const categoryData = uniqueCategories.map((category) => {
+          const productsInCategory = data.filter((product) => product.category === category);
+          const randomProduct = productsInCategory[Math.floor(Math.random() * productsInCategory.length)];
+          
+          return {
+            name: category,
+            image: randomProduct?.image || "/images/categories/default.jpg",
+          };
+        });
+
+        setCategories(categoryData);
+      } catch (error) {
+        console.error("Error fetching categories:", error);
+      }
+    }
+
+    fetchCategories();
+  }, []);
+
+  const handleCategoryClick = (category) => {
+    router.push(`/shop?category=${encodeURIComponent(category)}`);
   };
 
   return (
-    <div className="p-8 bg-white overflow-hidden">
-      <h1 className="text-3xl font-bold text-black mb-6">Browse by Category</h1>
-      <div className="relative">
-        {/* Left Scroll Button - Hidden on Desktop */}
-        <button
-          onClick={() => handleScroll("left")}
-          className="absolute left-0 top-1/2 transform -translate-y-1/2 bg-white shadow-md rounded-full p-2 z-10 md:hidden"
-        >
-          <ChevronLeft size={24} />
-        </button>
+    <div className="w-full bg-white py-8">
+      <h2 className="text-2xl font-bold text-center mb-6">What are you shopping for today?</h2>
 
-        {/* Category Slider */}
-        <div
-          id="category-slider"
-          className="overflow-x-auto snap-x snap-mandatory scrollbar-hide flex gap-6 px-10 scroll-smooth"
-          style={{ WebkitOverflowScrolling: "touch", overflowX: "hidden" }} // Ensures smooth scrolling
-        >
-          {categories.map((category, index) => (
-            <a
-              key={index}
-              href={category.link}
-              className="flex flex-col items-center bg-white shadow-lg rounded-lg p-4 min-w-[160px] border"
-            >
-              <img
-                src={category.image}
-                alt={category.name}
-                className="w-32 h-32 object-cover rounded-md"
-              />
-              <p className="text-black font-medium mt-2">{category.name}</p>
-            </a>
-          ))}
-        </div>
-
-        {/* Right Scroll Button - Hidden on Desktop */}
-        <button
-          onClick={() => handleScroll("right")}
-          className="absolute right-0 top-1/2 transform -translate-y-1/2 bg-white shadow-md rounded-full p-2 z-10 md:hidden"
-        >
-          <ChevronRight size={24} />
-        </button>
+      {/* Responsive grid for 2-row max on mobile, 1 row on larger screens */}
+      <div className="grid grid-cols-3 gap-4 sm:grid-cols-3 md:grid-cols-6 px-4 lg:px-16">
+        {categories.map(({ name, image }) => (
+          <button
+            key={name}
+            className="flex flex-col items-center space-y-2 hover:scale-105 transition w-[100px] h-[140px] sm:w-[120px] sm:h-[160px] md:w-[140px] md:h-[180px] mx-auto"
+            onClick={() => handleCategoryClick(name)}
+          >
+            <img
+              src={image}
+              alt={name}
+              className="w-[80px] h-[80px] sm:w-[100px] sm:h-[100px] md:w-[120px] md:h-[120px] object-cover rounded-full border shadow-md"
+              onError={(e) => (e.target.src = "/images/categories/default.jpg")}
+            />
+            <span className="text-xs sm:text-sm font-medium text-center">{name}</span>
+          </button>
+        ))}
       </div>
     </div>
   );
-};
-
-export default BrowseByCategory;
+}

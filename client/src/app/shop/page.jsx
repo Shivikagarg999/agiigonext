@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Search } from "lucide-react";
+import { useSearchParams } from "next/navigation";
+import { Search, ChevronDown, ChevronUp } from "lucide-react";
 import Nav from "../nav/Nav";
 import Footer from "../footer/Footer";
 import TopBar from "../components/TopBar";
@@ -16,6 +17,10 @@ export default function ProductsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [searchQuery, setSearchQuery] = useState("");
+  const [showCategories, setShowCategories] = useState(false);
+
+  const searchParams = useSearchParams();
+  const categoryFromQuery = searchParams.get("category");
 
   useEffect(() => {
     async function fetchProducts() {
@@ -48,6 +53,10 @@ export default function ProductsPage() {
   }, []);
 
   useEffect(() => {
+    setSelectedCategory(categoryFromQuery);
+  }, [categoryFromQuery]);
+
+  useEffect(() => {
     let filtered = products;
 
     if (selectedCategory) {
@@ -67,7 +76,7 @@ export default function ProductsPage() {
 
   return (
     <>
-      <TopBar/>
+      <TopBar />
       <Nav />
       <div className="container mx-auto px-6 py-10">
         <div className="relative w-full h-auto max-h-[96vh] flex items-center justify-center overflow-hidden rounded-lg">
@@ -77,27 +86,45 @@ export default function ProductsPage() {
         <div className="mt-10 flex flex-col md:flex-row gap-8">
           <aside className="w-full md:w-1/4 bg-white shadow rounded-lg p-6">
             <h2 className="text-xl font-bold mb-4">Filters</h2>
-            <h3 className="font-semibold mb-2">Category</h3>
-            <ul className="space-y-2">
-              <li>
-                <button
-                  className={`w-full text-left px-4 py-2 rounded-md ${!selectedCategory ? "bg-[#EB8426] text-white" : "hover:bg-gray-100"}`}
-                  onClick={() => setSelectedCategory(null)}
-                >
-                  All Products
-                </button>
-              </li>
-              {categories.map((category) => (
-                <li key={category}>
+
+            <button 
+              className="w-full flex items-center justify-between bg-gray-100 text-gray-700 py-2 px-4 rounded-md mb-4 hover:bg-gray-200 transition"
+              onClick={() => setShowCategories(!showCategories)}
+            >
+              <span className="font-medium">Categories</span>
+              {showCategories ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+            </button>
+
+            {showCategories && (
+              <ul className="space-y-2">
+                <li>
                   <button
-                    className={`w-full text-left px-4 py-2 rounded-md ${selectedCategory === category ? "bg-[#EB8426] text-white" : "hover:bg-gray-100"}`}
-                    onClick={() => setSelectedCategory(category)}
+                    className={`w-full text-left px-4 py-2 rounded-md border transition ${
+                      !selectedCategory
+                        ? "border-[#EB8426] text-[#EB8426] font-semibold"
+                        : "border-transparent hover:border-gray-300"
+                    }`}
+                    onClick={() => setSelectedCategory(null)}
                   >
-                    {category}
+                    All Products
                   </button>
                 </li>
-              ))}
-            </ul>
+                {categories.map((category) => (
+                  <li key={category}>
+                    <button
+                      className={`w-full text-left px-4 py-2 rounded-md border transition ${
+                        selectedCategory === category
+                          ? "border-[#EB8426] text-[#EB8426] font-semibold"
+                          : "border-transparent hover:border-gray-300"
+                      }`}
+                      onClick={() => setSelectedCategory(category)}
+                    >
+                      {category}
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
 
             <h3 className="font-semibold mt-6 mb-2">Price Range</h3>
             <div className="flex items-center space-x-2">
@@ -154,14 +181,10 @@ export default function ProductsPage() {
                     />
                     <h2 className="text-xl font-semibold mt-4">{product.name}</h2>
                     <p className="text-gray-600">${product.price}</p>
-                    <button
-                      className="bg-[#EB8426] text-white py-2 px-4 rounded hover:bg-orange-700 transition mt-4 w-full"
-                    >
-                      Add to Cart
-                    </button>
+                    <button className="bg-[#EB8426] text-white py-2 px-4 rounded hover:bg-orange-700 transition mt-4 w-full">Add to Cart</button>
                   </a>
                 ))}
-              </div>          
+              </div>
             )}
           </div>
         </div>
