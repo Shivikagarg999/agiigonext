@@ -6,7 +6,6 @@ import Nav from "../nav/Nav";
 import Footer from "../footer/Footer";
 const api_url = process.env.NEXT_PUBLIC_API_URL;
 
-
 export default function RegisterPage() {
   const router = useRouter();
   const [formData, setFormData] = useState({

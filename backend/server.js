@@ -25,7 +25,7 @@ mongoose
     .catch((err) => console.error("MongoDB connection error:", err));
 
 // ✅ CORS Setup
-const allowedOrigins = ["https://agiigo.com","https://www.agiigo.com","http://localhost:3000"];
+const allowedOrigins = ["https://agiigo.com","https://www.agiigo.com","http://localhost:3000", "https://sellerhub.agiigo.com"];
 const corsOptions = {
   origin: allowedOrigins,
   credentials: true, 
