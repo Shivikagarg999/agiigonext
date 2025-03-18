@@ -45,7 +45,7 @@ const Products = () => {
               />
             </div>
             <div className="flex flex-col flex-grow justify-between">
-              <h2 className="text-xl font-semibold mt-4">{product.name}</h2>
+              <h2 className="text-xl font-semibold mt-4 text-black">{product.name}</h2>
               <p className="text-gray-600">{product.price}</p>
               <button
                 className="bg-[#EB8426] text-white py-2 px-4 rounded hover:bg-orange-700 transition mt-4 w-full"

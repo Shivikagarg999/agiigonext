@@ -1,7 +1,6 @@
 "use client";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-
 import Nav from "../nav/Nav";
 import Footer from "../footer/Footer";
 
@@ -21,38 +20,37 @@ export default function LoginForm() {
     setLoading(true);
 
     try {
-        const res = await fetch("https://api.agiigo.com/api/login", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(form),
-            credentials: "include", // 🟠 Allow receiving cookies from the backend
-        });
+      const res = await fetch("http://localhost:4000/api/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(form),
+        credentials: "include",
+      });
 
-        const data = await res.json();
-        console.log("Login Response:", data);
+      const data = await res.json();
+      console.log("Login Response:", data);
 
-        if (!res.ok) throw new Error(data.message || "Login failed");
+      if (!res.ok) throw new Error(data.message || "Login failed");
 
-        // ✅ Store token and user data in cookies
-        document.cookie = `token=${data.token}; path=/; max-age=86400`; // Store token for 1 day
-        document.cookie = `user=${encodeURIComponent(JSON.stringify(data.user))}; path=/; max-age=86400`;
+      // ✅ Store token and user data in localStorage
+      localStorage.setItem("token", data.token);
+      localStorage.setItem("user", JSON.stringify(data.user));
 
-        // Redirect based on role
-        if (data.user.role === "buyer") {
-            router.push("/pages/buyer");
-        } else if (data.user.role === "seller") {
-            router.push("/seller");
-        } else {
-            throw new Error("Invalid user role");
-        }
+      // Redirect based on role
+      if (data.user.role === "buyer") {
+        router.push("/pages/buyer");
+      } else if (data.user.role === "seller") {
+        router.push("/seller");
+      } else {
+        throw new Error("Invalid user role");
+      }
     } catch (err) {
-        console.error("Login Error:", err.message);
-        setError(err.message);
+      console.error("Login Error:", err.message);
+      setError(err.message);
     } finally {
-        setLoading(false);
+      setLoading(false);
     }
-};
-
+  };
 
   return (
     <>

@@ -50,7 +50,7 @@ export default function BrowseByCategory() {
 
   return (
     <div className="w-full bg-white py-8">
-      <h2 className="text-2xl font-bold text-center mb-6">What are you shopping for today?</h2>
+      <h2 className="text-2xl font-bold text-center mb-6 text-black">What are you shopping for today?</h2>
 
       {/* Responsive grid for 2-row max on mobile, 1 row on larger screens */}
       <div className="grid grid-cols-3 gap-4 sm:grid-cols-3 md:grid-cols-6 px-4 lg:px-16">
@@ -66,7 +66,7 @@ export default function BrowseByCategory() {
               className="w-[80px] h-[80px] sm:w-[100px] sm:h-[100px] md:w-[120px] md:h-[120px] object-cover rounded-full border shadow-md"
               onError={(e) => (e.target.src = "/images/categories/default.jpg")}
             />
-            <span className="text-xs sm:text-sm font-medium text-center">{name}</span>
+            <span className="text-xs sm:text-sm font-semibold text-center text-black">{name}</span>
           </button>
         ))}
       </div>

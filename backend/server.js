@@ -13,16 +13,12 @@ const cookieParser = require("cookie-parser");
 const crypto = require("crypto")
 const jwt = require("jsonwebtoken");
 const ImageKit = require("imagekit");
+const Cart = require("./models/Cart")
 
 // Middleware
 app.use(express.json());
 app.use(cookieParser());
 JWT_SECRET='5d9a573fea33f72342dc47bec8951b4bcba0ae61283ce0ee6cfa26659e0b5837'
-
-mongoose
-    .connect("mongodb+srv://shivika:agiigo_karan@cluster0.reo6o.mongodb.net/agiigo-next")
-    .then(() => console.log("MongoDB Connected"))
-    .catch((err) => console.error("MongoDB connection error:", err));
 
 // ✅ CORS Setup
 const allowedOrigins = ["https://agiigo.com","https://www.agiigo.com","http://localhost:3000", "https://sellerhub.agiigo.com"];
@@ -38,21 +34,18 @@ mongoose
   .then(() => console.log("MongoDB Connected"))
   .catch((err) => console.error("MongoDB connection error:", err));
 
-const authMiddleware = (req, res, next) => {
-  const token = req.cookies.token;
-
-  if (!token) {
-    return res.status(401).json({ message: "Unauthorized access" });
-  }
-
-  try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    req.user = decoded; // Attach user data to request
-    next();
-  } catch (error) {
-    res.status(401).json({ message: "Invalid or expired token" });
-  }
-};
+  const authMiddleware = (req, res, next) => {
+    try {
+      const token = req.cookies.token;
+      if (!token) return res.status(401).json({ message: "Unauthorized: No token provided" });
+  
+      const decoded = jwt.verify(token, process.env.JWT_SECRET);
+      req.user = decoded;  // This should include userId
+      next();
+    } catch (error) {
+      return res.status(403).json({ message: "Forbidden: Invalid token" });
+    }
+  };  
 
   app.post("/api/login", async (req, res) => {
     const { email, password } = req.body;
@@ -337,6 +330,55 @@ app.put("/api/profile/seller/:sellerId", upload.single("pfp"), async (req, res) 
         console.error("Error updating seller profile:", error);
         res.status(500).json({ message: "Server error", error: error.message });
     }
+});
+//CART ROUTES
+app.post("/api/cart/add", authMiddleware, async (req, res) => {
+  try {
+    const { productId, quantity } = req.body;
+    const userId = req.user.userId;
+
+    console.log("Adding to Cart:", { userId, productId, quantity });
+
+    if (!userId || !productId) {
+      return res.status(400).json({ message: "Missing userId or productId" });
+    }
+
+    let cart = await Cart.findOne({ userId });
+
+    if (cart) {
+      // Check if product already exists
+      let itemIndex = cart.products.findIndex((p) => p.productId.toString() === productId);
+      if (itemIndex > -1) {
+        cart.products[itemIndex].quantity += quantity;
+      } else {
+        cart.products.push({ productId, quantity });
+      }
+    } else {
+      // Create new cart
+      cart = new Cart({
+        userId,
+        products: [{ productId, quantity }],
+      });
+    }
+
+    await cart.save();
+    console.log("Cart updated successfully", cart);
+    return res.status(200).json(cart);
+  } catch (error) {
+    console.error("Error adding to cart:", error);
+    res.status(500).json({ message: "Server error", error: error.message });
+  }
+});
+
+// ✅ Get Cart Route
+app.get("/api/cart", authMiddleware, async (req, res) => {
+  try {
+    const cart = await Cart.findOne({ userId: req.user.userId }).populate("items.productId");
+    if (!cart) return res.status(404).json({ message: "Cart is empty" });
+    res.status(200).json(cart);
+  } catch (error) {
+    res.status(500).json({ message: "Server error", error: error.message });
+  }
 });
 
 // ✅ Start Server

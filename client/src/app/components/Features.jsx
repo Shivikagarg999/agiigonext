@@ -18,7 +18,7 @@ export default function Features() {
     ];
   
     return (
-      <div className="flex flex-wrap justify-center gap-6 p-6">
+      <div className="flex flex-wrap bg-white text-black justify-center gap-6 p-6">
         {features.map((feature, index) => (
           <div key={index} className="bg-[#F5F6F8] rounded-2xl pt-10 pb-10 pr-5 pl-5 flex items-center space-x-4 w-96">
             <div className="flex-1">
