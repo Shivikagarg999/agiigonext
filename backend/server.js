@@ -209,9 +209,9 @@ const imagekit = new ImageKit({
 
 app.post("/api/products", upload.single("image"), async (req, res) => {
   try {
-    const { name, description, price, category, userId } = req.body;
+    const { name, description, price, priceCurrency ,category, userId } = req.body;
 
-    if (!name || !description || !price || !category || !userId || !req.file) {
+    if (!name || !description || !price || !priceCurrency ||!category || !userId || !req.file) {
       return res.status(400).json({ error: "All fields are required, including an image" });
     }
 
@@ -233,6 +233,7 @@ app.post("/api/products", upload.single("image"), async (req, res) => {
       name,
       description,
       price,
+      priceCurrency,
       category,
       image: uploadedImage.url, // Store ImageKit URL
       user: userId,
@@ -331,6 +332,59 @@ app.put("/api/profile/seller/:sellerId", upload.single("pfp"), async (req, res) 
         res.status(500).json({ message: "Server error", error: error.message });
     }
 });
+
+// Update-edit product
+app.put("/api/products/:id", upload.single("image"), async (req, res) => {
+  try {
+    const { name, description, price, priceCurrency, category } = req.body;
+
+    if (!name || !description || !price || !priceCurrency || !category ) {
+      return res.status(400).json({ error: "All fields except image are required" });
+    }
+
+    // Find the product
+    const product = await Product.findById(req.params.id);
+    if (!product) {
+      return res.status(404).json({ error: "Product not found" });
+    }
+
+    let updatedFields = { name, description, price, priceCurrency, category };
+
+    // If a new image is uploaded, update it on ImageKit
+    if (req.file) {
+      const uploadedImage = await imagekit.upload({
+        file: req.file.buffer.toString("base64"),
+        fileName: req.file.originalname,
+        folder: "/products",
+      });
+      updatedFields.image = uploadedImage.url;
+    }
+
+    // Update the product in the database
+    const updatedProduct = await Product.findByIdAndUpdate(req.params.id, updatedFields, { new: true });
+
+    res.status(200).json({ message: "Product updated successfully", product: updatedProduct });
+  } catch (err) {
+    console.error("Error updating product:", err);
+    res.status(500).json({ error: "Failed to update product", details: err.message });
+  }
+});
+// DELETE PRODUCT
+app.delete("/api/products/:id", async (req, res) => {
+  try {
+    const product = await Product.findById(req.params.id);
+    if (!product) {
+      return res.status(404).json({ error: "Product not found" });
+    }
+
+    await Product.findByIdAndDelete(req.params.id);
+    res.status(200).json({ message: "Product deleted successfully" });
+  } catch (err) {
+    console.error("Error deleting product:", err);
+    res.status(500).json({ error: "Failed to delete product", details: err.message });
+  }
+});
+
 //CART ROUTES
 app.post("/api/cart/add", authMiddleware, async (req, res) => {
   try {

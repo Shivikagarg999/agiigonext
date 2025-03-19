@@ -11,6 +11,12 @@ const productSchema = new mongoose.Schema({
   name: { type: String, required: true },
   description: { type: String, required: true },
   price: { type: Number, required: true },
+  priceCurrency: { 
+    type: String, 
+    required: true, 
+    enum: ['AED', 'USD'], 
+    default: 'USD' 
+  },
   category: { type: String, required: true },
   image: { type: String },
   user: { 
