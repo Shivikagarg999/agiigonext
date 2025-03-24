@@ -10,7 +10,7 @@ const FAQ = () => {
       items: [
         { question: "What is Agiigo.com?", answer: "Agiigo.com is an online marketplace where buyers and sellers can connect to buy and sell a wide range of products across the UAE." },
         { question: "How does Agiigo.com work?", answer: "Sellers list items for auction or fixed-price, and buyers can browse, bid, or purchase. We ensure secure payments and seller protection." },
-        { question: "Is Agiigo.com available outside Dubai?", answer: "Currently, Agiigo.com primarily serves Dubai, but we support nationwide shipping across the UAE." },
+        { question: "Is Agiigo.com available outside Dubai?", answer: "Currently, Agiigo.com primarily serves Dubai." },
       ],
     },
     {

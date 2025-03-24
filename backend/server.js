@@ -21,7 +21,7 @@ app.use(cookieParser());
 JWT_SECRET='5d9a573fea33f72342dc47bec8951b4bcba0ae61283ce0ee6cfa26659e0b5837'
 
 // ✅ CORS Setup
-const allowedOrigins = ["https://agiigo.com","https://www.agiigo.com","http://localhost:3000", "https://sellerhub.agiigo.com"];
+const allowedOrigins = ["https://agiigo.com","https://www.agiigo.com","http://localhost:3000", "https://sellerhub.agiigo.com",];
 const corsOptions = {
   origin: allowedOrigins,
   credentials: true, 
@@ -206,7 +206,7 @@ const imagekit = new ImageKit({
   privateKey: process.env.IMAGEKIT_PRIVATE_KEY,
   urlEndpoint: process.env.IMAGEKIT_URL_ENDPOINT,
 });
-
+// Upload product
 app.post("/api/products", upload.single("image"), async (req, res) => {
   try {
     const { name, description, price, priceCurrency ,category, userId } = req.body;
@@ -384,43 +384,82 @@ app.delete("/api/products/:id", async (req, res) => {
     res.status(500).json({ error: "Failed to delete product", details: err.message });
   }
 });
+app.post("/api/products/guest", upload.single("image"), async (req, res) => {
+  try {
+    const { name, description, price, priceCurrency, category } = req.body;
+
+    if (!name || !description || !price || !priceCurrency || !category || !req.file) {
+      return res.status(400).json({ error: "All fields are required, including an image" });
+    }
+
+    // Upload image to ImageKit
+    const uploadedImage = await imagekit.upload({
+      file: req.file.buffer.toString("base64"),
+      fileName: req.file.originalname,
+      folder: "/products",
+    });
+
+    // Create new product without user ID
+    const newProduct = new Product({
+      name,
+      description,
+      price,
+      priceCurrency,
+      category,
+      image: uploadedImage.url,
+      user: null, // No user assigned
+    });
+
+    await newProduct.save();
+
+    res.status(201).json({ message: "Product uploaded successfully", product: newProduct });
+  } catch (err) {
+    console.error("Error uploading product:", err);
+    res.status(500).json({ error: "Failed to upload product", details: err.message });
+  }
+});
 
 //CART ROUTES
-app.post("/api/cart/add", authMiddleware, async (req, res) => {
+app.post("/api/cart/add", async (req, res) => {
   try {
-    const { productId, quantity } = req.body;
-    const userId = req.user.userId;
+      const { productId, quantity, userId } = req.body;
 
-    console.log("Adding to Cart:", { userId, productId, quantity });
-
-    if (!userId || !productId) {
-      return res.status(400).json({ message: "Missing userId or productId" });
-    }
-
-    let cart = await Cart.findOne({ userId });
-
-    if (cart) {
-      // Check if product already exists
-      let itemIndex = cart.products.findIndex((p) => p.productId.toString() === productId);
-      if (itemIndex > -1) {
-        cart.products[itemIndex].quantity += quantity;
-      } else {
-        cart.products.push({ productId, quantity });
+      if (!userId || !productId || !quantity) {
+          return res.status(400).json({ message: "User ID, product ID, and quantity are required." });
       }
-    } else {
-      // Create new cart
-      cart = new Cart({
-        userId,
-        products: [{ productId, quantity }],
-      });
-    }
 
-    await cart.save();
-    console.log("Cart updated successfully", cart);
-    return res.status(200).json(cart);
+      // Fetch product to get current price
+      const product = await Product.findById(productId);
+      if (!product) return res.status(404).json({ message: "Product not found" });
+
+      let cart = await Cart.findOne({ userId });
+
+      if (!cart) {
+          cart = new Cart({ userId, items: [], totalPrice: 0 });
+      }
+
+      // Check if the product is already in the cart
+      const existingItem = cart.items.find((item) => item.productId.toString() === productId);
+
+      if (existingItem) {
+          existingItem.quantity += quantity;
+      } else {
+          cart.items.push({
+              productId,
+              quantity,
+              priceAtTimeOfAddition: product.price,
+              
+          });
+      }
+
+      // Calculate total price
+      cart.totalPrice = cart.items.reduce((total, item) => total + item.quantity * item.priceAtTimeOfAddition, 0);
+
+      await cart.save();
+      res.status(200).json({ message: "Product added to cart", cart });
   } catch (error) {
-    console.error("Error adding to cart:", error);
-    res.status(500).json({ message: "Server error", error: error.message });
+      console.error("Error adding to cart:", error);
+      res.status(500).json({ message: "Internal server error" });
   }
 });
 

@@ -10,10 +10,10 @@ import FAQ from "../FAQs/Faqs";
 
 const AboutUs = () => {
   return (
-    <>
+    <div className="bg-white">
       <TopBar/>
       <Nav />
-      <section className="container mx-auto bg-white px-6 py-12 flex flex-col md:flex-row items-center">
+      <section className="container mx-auto bg-white px-6 mt-8 py-12 flex flex-col md:flex-row items-center">
         {/* Left Section - Animating text */}
         <motion.div 
           className="md:w-1/2"
@@ -29,7 +29,7 @@ const AboutUs = () => {
           >
             WHO WE ARE
           </motion.span>
-          <h2 className="text-3xl font-bold mt-4">Agiigo – The Ultimate Marketplace</h2>
+          <h2 className="text-3xl font-bold mt-4 text-black">Agiigo – The Ultimate Marketplace</h2>
           <p className="text-gray-600 mt-4">
             At Agiigo, we are a dynamic online marketplace that connects sellers and buyers seamlessly. 
             Our platform enables sellers to list and showcase their products while providing buyers with 
@@ -102,7 +102,7 @@ const AboutUs = () => {
     </div>
       <FAQ/>
       <Footer />
-    </>
+    </div>
   );
 };
 

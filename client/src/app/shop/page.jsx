@@ -75,10 +75,10 @@ function ProductsContent() {
   }, [selectedCategory, minPrice, maxPrice, searchQuery, products]);
 
   return (
-    <>
+    <div className="bg-white">
       <TopBar />
       <Nav />
-      <div className="container mx-auto px-6 py-10">
+      <div className="container mt-8 bg-white text-black px-6 py-10">
         <div className="relative w-full h-auto max-h-[96vh] flex items-center justify-center overflow-hidden rounded-lg">
           <img src="/images/prod.jpeg" alt="Shop Banner" className="w-full h-auto object-cover" />
         </div>
@@ -180,7 +180,7 @@ function ProductsContent() {
                       className="w-full h-48 object-cover rounded-md"
                     />
                     <h2 className="text-xl font-semibold mt-4">{product.name}</h2>
-                    <p className="text-gray-600">${product.price}</p>
+                    <p className="text-gray-600">{product.price} {product.priceCurrency}</p>
                     <button className="bg-[#EB8426] text-white py-2 px-4 rounded hover:bg-orange-700 transition mt-4 w-full">Add to Cart</button>
                   </a>
                 ))}
@@ -190,7 +190,7 @@ function ProductsContent() {
         </div>
       </div>
       <Footer />
-    </>
+    </div>
   );
 }
 

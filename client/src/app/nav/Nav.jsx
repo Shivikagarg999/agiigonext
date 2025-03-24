@@ -4,6 +4,11 @@ import { ChevronDown, User, Search, ShoppingCart, Heart, Menu, X } from "lucide-
 
 export default function Nav() {
   const [isOpen, setIsOpen] = useState(false);
+  
+
+const goToCart = () => {
+  router.push("/cart");  // Navigate to cart
+};
 
   return (
     <nav className="bg-white py-5 shadow-md">
@@ -56,12 +61,17 @@ export default function Nav() {
             </li>
             <li className="flex space-x-4">
               <Search className="h-6 w-6 text-[#EB8426] hover:text-black cursor-pointer" />
-              <ShoppingCart className="h-6 w-6 text-[#EB8426] hover:text-black cursor-pointer" />
+              <ShoppingCart
+      className="h-6 w-6 text-[#EB8426] hover:text-black cursor-pointer"
+      onClick={goToCart}
+    />
               <Heart className="h-6 w-6 text-[#EB8426] hover:text-black cursor-pointer" />
             </li>
           </ul>
         </div>
       )}
+
     </nav>
+    
   );
 }

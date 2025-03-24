@@ -11,10 +11,13 @@ export default function Home() {
 
       {/* Hero Section */}
       <header 
-        className="bg-[url('/images/header-bg.jpeg')] bg-cover bg-center bg-no-repeat text-white py-10 
-                   min-h-[50vh] md:min-h-screen w-full flex items-center"
+        className="bg-[url('/images/headd.png')] bg-cover bg-center bg-no-repeat text-white py-10 
+                   min-h-[50vh] md:min-h-screen w-full flex items-center relative"
       >
-        <div className="container text-black mx-auto px-6 md:px-12 lg:px-20 w-full flex flex-col items-start justify-start">
+        {/* Overlay */}
+        <div className="absolute inset-0 bg-black bg-opacity-10"></div>
+
+        <div className="container text-white mx-auto px-6 md:px-12 lg:px-20 w-full flex flex-col items-start justify-start relative z-10">
           <h2 className="text-4xl md:text-5xl font-bold">Style Redefined</h2>
           <p className="mt-3 text-lg md:text-xl">We know how large objects will act, but things on a small scale.</p>
           
