@@ -1,42 +1,70 @@
 "use client";
-
 import { useState } from "react";
-import { UserIcon, ChevronDownIcon, MagnifyingGlassIcon, ShoppingCartIcon, HeartIcon, Bars3Icon, XMarkIcon } from "@heroicons/react/24/outline";
+import { MagnifyingGlassIcon } from "@heroicons/react/24/outline";
+import Link from "next/link";
 
-export default function Home() {
-  const [isOpen, setIsOpen] = useState(false);
+export default function HeroSection() {
+  const [searchQuery, setSearchQuery] = useState("");
+
   return (
-    <div className="h-auto bg-gray-100">
-      {/* Navbar */}
-
+    <div className="bg-gray-100">
       {/* Hero Section */}
       <header 
-        className="bg-[url('/images/topimg.jpeg')] bg-cover bg-center bg-no-repeat text-white py-10 
-                   min-h-[50vh] md:min-h-screen w-full flex items-center relative"
+        className="relative bg-[url('/images/topimg.jpeg')] bg-cover bg-center bg-no-repeat 
+                   text-white min-h-[70vh] md:min-h-[80vh] w-full flex items-center"
       >
-        {/* Overlay */}
-        <div className="absolute inset-0 bg-black bg-opacity-10"></div>
+        {/* Gradient Overlay + Black Rectangle */}
+        <div className="absolute inset-0 bg-gradient-to-r from-black/50 to-black/20">
+          <div className="absolute inset-0 bg-black/40"></div>
+        </div>
 
-        <div className="container text-white mx-auto px-6 md:px-12 lg:px-20 w-full flex flex-col items-start justify-start relative z-10">
-          <h2 className="text-4xl md:text-5xl font-bold">Style Redefined</h2>
-          <p className="mt-3 text-lg md:text-xl">We know how large objects will act, but things on a small scale.</p>
-          
-          {/* Search bar */}
-          <div className="mt-6 flex items-center relative w-full max-w-lg">
-            <input 
-              type="text" 
-              placeholder="Search everything" 
-              className="px-4 py-3 w-full rounded-full shadow-md focus:outline-none text-gray-900"
-            />
-            <button className="absolute right-4 text-[#EB8426] hover:text-black">
-              <MagnifyingGlassIcon className="h-6 w-6" />
-            </button>
+        <div className="container mx-auto px-6 md:px-12 lg:px-24 w-full relative z-10">
+          <div className="max-w-2xl px-4 py-8 md:px-8 md:py-12 rounded-lg">
+            <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold leading-tight mb-4">
+              Style <span className="text-[#EB8426]">Redefined</span>
+            </h1>
+            
+            <p className="text-lg md:text-xl text-gray-100 mb-8 leading-relaxed">
+              Discover premium fashion that blends quality with contemporary design. 
+              We know how large objects will act, but things on a small scale.
+            </p>
+            
+            {/* Search bar */}
+            <div className="mb-8 relative w-full max-w-xl mx-auto">
+              <input 
+                type="text" 
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Search for products, brands and more..." 
+                className="px-6 py-3 w-full rounded-full shadow-lg focus:outline-none 
+                          focus:ring-2 focus:ring-[#EB8426] text-gray-800 placeholder-gray-500"
+              />
+              <button 
+                className="absolute right-3 top-1/2 transform -translate-y-1/2 bg-[#EB8426] 
+                          p-2 rounded-full hover:bg-orange-700 transition-colors"
+              >
+                <MagnifyingGlassIcon className="h-5 w-5 text-white" />
+              </button>
+            </div>
+
+            {/* CTA Buttons with Links */}
+            <div className="flex flex-col sm:flex-row gap-4 justify-center sm:justify-start">
+              <Link 
+                href="/shop" 
+                className="bg-[#EB8426] hover:bg-orange-700 text-white px-6 py-3 sm:px-8 sm:py-3 rounded-full 
+                          text-base sm:text-lg font-semibold shadow-lg transition-all duration-300 text-center"
+              >
+                Shop Now
+              </Link>
+              <Link 
+                href="/about" 
+                className="border-2 border-white hover:bg-white/10 text-white px-6 py-3 sm:px-8 sm:py-3 
+                          rounded-full text-base sm:text-lg font-semibold transition-all duration-300 text-center"
+              >
+                About Agiigo
+              </Link>
+            </div>
           </div>
-
-          {/* CTA Button */}
-          <button className="mt-6 bg-[#EB8426] text-white px-6 py-3 rounded-md text-lg font-semibold shadow-md">
-            Shop Now
-          </button>
         </div>
       </header>
     </div>
