@@ -1,10 +1,11 @@
 "use client";
 import { useEffect, useState } from "react";
-import { FaStar, FaRegStar, FaStarHalfAlt, FaShoppingCart } from "react-icons/fa";
+import { FaStar, FaRegStar, FaStarHalfAlt } from "react-icons/fa";
+import Link from "next/link";
 
 const NewArrivals = () => {
-  const [products, setProducts] = useState([]);
-  const [hasProducts, setHasProducts] = useState(true); // Track if products exist
+  const [newArrivals, setNewArrivals] = useState([]);
+  const [hasProducts, setHasProducts] = useState(true);
 
   const generateRandomRating = () => {
     const base = 4;
@@ -12,10 +13,34 @@ const NewArrivals = () => {
     return Math.min(5, (base + variation).toFixed(1));
   };
 
-  const addToCart = async (product, e) => {
-    e.preventDefault();
-    console.log("Added to cart:", product.name);
-  };
+  useEffect(() => {
+    const fetchNewArrivals = async () => {
+      try {
+        const res = await fetch("https://api.agiigo.com/api/new-arrivals");
+        if (!res.ok) throw new Error("Failed to fetch");
+        
+        const data = await res.json();
+        if (!data?.length) {
+          setHasProducts(false);
+          return;
+        }
+
+        setNewArrivals(data.map(product => ({
+          ...product,
+          rating: generateRandomRating(),
+          reviewCount: Math.floor(Math.random() * 100) + 10,
+          discount: Math.floor(Math.random() * 50) + 10
+        })));
+        
+        setHasProducts(true);
+      } catch (error) {
+        console.error("Fetch error:", error);
+        setHasProducts(false);
+      }
+    };
+
+    fetchNewArrivals();
+  }, []);
 
   const StarRating = ({ rating }) => {
     const stars = [];
@@ -24,117 +49,77 @@ const NewArrivals = () => {
     
     for (let i = 1; i <= 5; i++) {
       if (i <= fullStars) {
-        stars.push(<FaStar key={i} className="text-yellow-400" />);
+        stars.push(<FaStar key={i} className="text-yellow-400 text-[10px]" />);
       } else if (i === fullStars + 1 && hasHalfStar) {
-        stars.push(<FaStarHalfAlt key={i} className="text-yellow-400" />);
+        stars.push(<FaStarHalfAlt key={i} className="text-yellow-400 text-[10px]" />);
       } else {
-        stars.push(<FaRegStar key={i} className="text-yellow-400" />);
+        stars.push(<FaRegStar key={i} className="text-yellow-400 text-[10px]" />);
       }
     }
     
     return <div className="flex">{stars}</div>;
   };
 
-  useEffect(() => {
-    const fetchNewArrivals = async () => {
-      try {
-        const res = await fetch("https://api.agiigo.com/api/new-arrivals");
-        const data = await res.json();
-        
-        if (data.length === 0) {
-          setHasProducts(false);
-          return;
-        }
-
-        const productsWithRatings = data.map(product => ({
-          ...product,
-          rating: generateRandomRating(),
-          reviewCount: Math.floor(Math.random() * 100) + 10
-        }));
-        
-        setProducts(productsWithRatings);
-        setHasProducts(data.length > 0);
-      } catch (error) {
-        console.error("Error fetching new arrivals:", error);
-        setHasProducts(false);
-      }
-    };
-
-    fetchNewArrivals();
-  }, []);
-
-  // Don't render if no products
-  if (!hasProducts) {
-    return null;
-  }
+  // Early return if no products
+  if (!hasProducts) return null;
 
   return (
-    <div className="min-h-screen bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-7xl mx-auto">
-        <div className="text-center mb-16">
-          <h1 className="text-4xl font-extrabold text-gray-900 sm:text-5xl sm:tracking-tight lg:text-6xl">
+    <div className="py-2 px-1 bg-gray-50 min-h-0">
+      <div className="mx-auto max-w-6xl">
+        <div className="text-center mb-4">
+          <h1 className="text-4xl m-6 font-bold text-gray-900 sm:text-4xl">
             New Arrivals
           </h1>
-          <p className="mt-5 max-w-xl mx-auto text-xl text-gray-500">
-            Discover our latest products
-          </p>
         </div>
 
         <div className="relative">
-          <div className="overflow-x-auto whitespace-nowrap scrollbar-hide py-4">
-            <div className="inline-flex gap-8 px-2">
-              {products.map((product) => (
-                <a
+          <div className="overflow-x-auto whitespace-nowrap scrollbar-hide py-2">
+            <div className="inline-flex gap-4 px-1">
+              {newArrivals.map((product) => (
+                <Link 
                   key={product.id || product._id}
                   href={`/products/${product.id || product._id}`}
-                  className="inline-block group relative bg-white rounded-xl shadow-md overflow-hidden hover:shadow-xl transition-all duration-300 ease-in-out transform hover:-translate-y-1"
-                  style={{ width: "280px" }}
+                  className="inline-block bg-white rounded-sm overflow-hidden hover:shadow-sm transition-all"
+                  style={{ width: "200px" }}
                 >
-                  <div className="aspect-w-3 aspect-h-4 w-full h-64 overflow-hidden">
+                  <div className="aspect-square w-full bg-gray-100 relative">
                     <img
                       src={product.image}
                       alt={product.name}
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                      className="w-full h-full object-cover"
                     />
+                    <div className="absolute top-1 left-1 bg-blue-500 text-white text-[12px] font-bold px-1 rounded">
+                      NEW
+                    </div>
                   </div>
 
-                  <div className="p-6">
-                    <div>
-                      <h3 className="text-lg font-semibold text-gray-900 line-clamp-2">
-                        {product.name}
-                      </h3>
-                      <div className="mt-1">
-                        <p className="text-lg font-bold text-orange-600">
-                          {product.price} {product.priceCurrency}
+                  <div className="p-2">
+                    <div className="flex items-center gap-1">
+                      <p className="text-md font-bold text-red-600">
+                        {product.price} {product.priceCurrency}
+                      </p>
+                      {product.originalPrice && (
+                        <p className="text-[10px] text-gray-500 line-through">
+                          ${product.originalPrice}
                         </p>
-                        {product.originalPrice && (
-                          <p className="text-sm text-gray-500 line-through">
-                            {product.originalPrice} {product.priceCurrency}
-                          </p>
-                        )}
-                      </div>
+                      )}
+                      <span className="text-[11px] text-red-600">
+                        -{product.discount}%
+                      </span>
                     </div>
                     
-                    <div className="mt-2 flex items-center">
+                    <h3 className="text-[15px] font-bold text-gray-900 mt-[2px] line-clamp-2 leading-tight h-[32px]">
+                      {product.name}
+                    </h3>
+                    
+                    <div className="mt-[2px] flex items-center">
                       <StarRating rating={product.rating} />
-                      <span className="ml-2 text-sm text-gray-500">
+                      <span className="ml-1 text-[13px] text-gray-500">
                         ({product.reviewCount})
                       </span>
                     </div>
-
-                    <button
-                      onClick={(e) => addToCart(product, e)}
-                      className="mt-4 w-full flex items-center justify-center rounded-md bg-orange-600 py-2 px-4 text-sm font-medium text-white hover:bg-orange-700 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:ring-offset-2 transition-colors"
-                    >
-                      <FaShoppingCart className="mr-2" />
-                      Add to Cart
-                    </button>
                   </div>
-
-                  <div className="absolute top-3 left-3 bg-blue-500 text-white text-xs font-bold px-2 py-1 rounded-full">
-                    NEW
-                  </div>
-                </a>
+                </Link>
               ))}
             </div>
           </div>
