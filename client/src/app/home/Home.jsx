@@ -14,7 +14,7 @@ export default function HeroSection() {
                    text-white min-h-[70vh] md:min-h-[80vh] w-full flex items-center"
       >
         {/* Gradient Overlay + Black Rectangle */}
-        <div className="absolute inset-0 bg-gradient-to-r from-black/50 to-black/20">
+        <div className="absolute inset-0 bg-gradient-to-r from-black/30 to-black/5">
           <div className="absolute inset-0 bg-black/40"></div>
         </div>
 
