@@ -11,7 +11,7 @@ export default function Home() {
 
       {/* Hero Section */}
       <header 
-        className="bg-[url('/images/headd.png')] bg-cover bg-center bg-no-repeat text-white py-10 
+        className="bg-[url('/images/topimg.jpeg')] bg-cover bg-center bg-no-repeat text-white py-10 
                    min-h-[50vh] md:min-h-screen w-full flex items-center relative"
       >
         {/* Overlay */}

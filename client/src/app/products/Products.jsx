@@ -1,12 +1,20 @@
 "use client";
 import { useEffect, useState } from "react";
-const api_url = process.env.NEXT_PUBLIC_API_URL;
+import { FaStar, FaRegStar, FaStarHalfAlt, FaShoppingCart } from "react-icons/fa";
 
 const Products = () => {
   const [products, setProducts] = useState([]);
 
-  const addToCart = async () => {
-    console.log("Added to cart");
+  // Generate random ratings (4-5 stars with some variation)
+  const generateRandomRating = () => {
+    const base = 4;
+    const variation = Math.random() * 1.5;
+    return Math.min(5, (base + variation).toFixed(1));
+  };
+
+  const addToCart = async (product, e) => {
+    e.preventDefault();
+    console.log("Added to cart:", product.name);
   };
 
   useEffect(() => {
@@ -14,7 +22,12 @@ const Products = () => {
       try {
         const res = await fetch("https://api.agiigo.com/api/products");
         const data = await res.json();
-        setProducts(data);
+        const productsWithRatings = data.map(product => ({
+          ...product,
+          rating: generateRandomRating(),
+          reviewCount: Math.floor(Math.random() * 100) + 10
+        }));
+        setProducts(productsWithRatings);
       } catch (error) {
         console.error("Error fetching products:", error);
       }
@@ -23,41 +36,98 @@ const Products = () => {
     fetchProducts();
   }, []);
 
+  // Star rating component
+  const StarRating = ({ rating }) => {
+    const stars = [];
+    const fullStars = Math.floor(rating);
+    const hasHalfStar = rating % 1 >= 0.5;
+    
+    for (let i = 1; i <= 5; i++) {
+      if (i <= fullStars) {
+        stars.push(<FaStar key={i} className="text-yellow-400" />);
+      } else if (i === fullStars + 1 && hasHalfStar) {
+        stars.push(<FaStarHalfAlt key={i} className="text-yellow-400" />);
+      } else {
+        stars.push(<FaRegStar key={i} className="text-yellow-400" />);
+      }
+    }
+    
+    return <div className="flex">{stars}</div>;
+  };
+
   return (
-    <div className="p-8 bg-white">
-      <h1 className="text-3xl font-bold text-black mb-6">
-        Explore Our Products
-      </h1>
-      <div className="overflow-x-auto scrollbar-hide">
-        <div className="flex flex-wrap gap-6 justify-center">
+    <div className="min-h-screen bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
+      <div className="max-w-7xl mx-auto">
+        <div className="text-center mb-16">
+          <h1 className="text-4xl font-extrabold text-gray-900 sm:text-5xl sm:tracking-tight lg:text-6xl">
+            Discover Our Products
+          </h1>
+          <p className="mt-5 max-w-xl mx-auto text-xl text-gray-500">
+            Premium quality for your everyday needs
+          </p>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
           {products.map((product) => (
             <a
-            key={product.id || product._id}
-            href={`/products/${product.id || product._id}`}
-            className="rounded-lg p-4 hover:shadow-lg transition cursor-pointer 
-                       flex flex-col justify-between w-[250px] h-[360px]" // Fixed size
-          >
-            <div className="w-full h-[200px] flex items-center justify-center overflow-hidden">
-              <img
-                src={product.image}
-                alt={product.name}
-                className="w-full h-full object-cover rounded-md"
-              />
-            </div>
-            <div className="flex flex-col flex-grow justify-between">
-              <h2 className="text-xl font-semibold mt-4 text-black">{product.name}</h2>
-              <p className="text-gray-600">{product.price} {product.priceCurrency}</p>
-              <button
-                className="bg-[#EB8426] text-white py-2 px-4 rounded hover:bg-orange-700 transition mt-4 w-full"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  addToCart(product);
-                }}
-              >
-                Add to Cart
-              </button>
-            </div>
-          </a>          
+              key={product.id || product._id}
+              href={`/products/${product.id || product._id}`}
+              className="group relative bg-white rounded-xl shadow-md overflow-hidden hover:shadow-xl transition-all duration-300 ease-in-out transform hover:-translate-y-1"
+            >
+              {/* Product image with hover effect */}
+              <div className="aspect-w-3 aspect-h-4 w-full h-64 overflow-hidden">
+                <img
+                  src={product.image}
+                  alt={product.name}
+                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                />
+              </div>
+
+              {/* Product info - Reorganized layout */}
+              <div className="p-6">
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900 line-clamp-2">
+                    {product.name}
+                  </h3>
+                  
+                  {/* Price moved below title */}
+                  <div className="mt-1">
+                    <p className="text-lg font-bold text-orange-600">
+                      {product.price} {product.priceCurrency}
+                    </p>
+                    {product.originalPrice && (
+                      <p className="text-sm text-gray-500 line-through">
+                        {product.originalPrice} {product.priceCurrency}
+                      </p>
+                    )}
+                  </div>
+                  
+                  {/* Rating below price */}
+                  <div className="mt-2 flex items-center">
+                    <StarRating rating={product.rating} />
+                    <span className="ml-2 text-sm text-gray-500">
+                      ({product.reviewCount})
+                    </span>
+                  </div>
+                </div>
+
+                {/* Add to cart button */}
+                <button
+                  onClick={(e) => addToCart(product, e)}
+                  className="mt-4 w-full flex items-center justify-center rounded-md bg-orange-600 py-2 px-4 text-sm font-medium text-white hover:bg-orange-700 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:ring-offset-2 transition-colors"
+                >
+                  <FaShoppingCart className="mr-2" />
+                  Add to Cart
+                </button>
+              </div>
+
+              {/* Optional badge */}
+              {Math.random() > 0.7 && (
+                <div className="absolute top-3 left-3 bg-green-500 text-white text-xs font-bold px-2 py-1 rounded-full">
+                  {Math.random() > 0.5 ? "Popular" : "New"}
+                </div>
+              )}
+            </a>
           ))}
         </div>
       </div>

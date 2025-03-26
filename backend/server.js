@@ -15,6 +15,7 @@ const jwt = require("jsonwebtoken");
 const ImageKit = require("imagekit");
 const Cart = require("./models/Cart")
 
+
 // Middleware
 app.use(express.json());
 app.use(cookieParser());
@@ -47,47 +48,47 @@ mongoose
     }
   };  
 
-  app.post("/api/login", async (req, res) => {
-    const { email, password } = req.body;
+  // app.post("/api/login", async (req, res) => {
+  //   const { email, password } = req.body;
   
-    if (!email || !password) {
-        return res.status(400).json({ message: "Email and password are required" });
-    }
+  //   if (!email || !password) {
+  //       return res.status(400).json({ message: "Email and password are required" });
+  //   }
   
-    try {
-        // Check if user exists
-        const user = await User.findOne({ email });
-        if (!user) return res.status(400).json({ message: "Invalid credentials" });
+  //   try {
+  //       // Check if user exists
+  //       const user = await User.findOne({ email });
+  //       if (!user) return res.status(400).json({ message: "Invalid credentials" });
   
-        // Compare password
-        const isMatch = await bcrypt.compare(password, user.password);
-        if (!isMatch) return res.status(400).json({ message: "Invalid credentials" });
+  //       // Compare password
+  //       const isMatch = await bcrypt.compare(password, user.password);
+  //       if (!isMatch) return res.status(400).json({ message: "Invalid credentials" });
   
-        // Generate JWT Token
-        const token = jwt.sign({ userId: user._id, role: user.role }, process.env.JWT_SECRET, { expiresIn: "7d" });
+  //       // Generate JWT Token
+  //       const token = jwt.sign({ userId: user._id, role: user.role }, process.env.JWT_SECRET, { expiresIn: "7d" });
   
-        // Set token in HTTP-only cookie
-        res.cookie("token", token, {
-            httpOnly: true,
-            secure: process.env.NODE_ENV === "production",
-            sameSite: "strict",
-        });
+  //       // Set token in HTTP-only cookie
+  //       res.cookie("token", token, {
+  //           httpOnly: true,
+  //           secure: process.env.NODE_ENV === "production",
+  //           sameSite: "strict",
+  //       });
   
-        res.status(200).json({
-            message: "Login successful",
-            user: {
-                _id: user._id,
-                name: user.name,
-                email: user.email,
-                role: user.role,
-            },
-            token,
-        });
-    } catch (error) {
-        console.error("Login Error:", error);
-        res.status(500).json({ message: "Server error", error: error.message });
-    }
-  });
+  //       res.status(200).json({
+  //           message: "Login successful",
+  //           user: {
+  //               _id: user._id,
+  //               name: user.name,
+  //               email: user.email,
+  //               role: user.role,
+  //           },
+  //           token,
+  //       });
+  //   } catch (error) {
+  //       console.error("Login Error:", error);
+  //       res.status(500).json({ message: "Server error", error: error.message });
+  //   }
+  // });
   app.post("/api/logout", (req, res) => {
     res.clearCookie("token", { path: "/" }); // Clear JWT token
     res.clearCookie("user", { path: "/" });  // Clear user info if stored in cookies
@@ -384,38 +385,147 @@ app.delete("/api/products/:id", async (req, res) => {
     res.status(500).json({ error: "Failed to delete product", details: err.message });
   }
 });
+// Handle guest product upload
 app.post("/api/products/guest", upload.single("image"), async (req, res) => {
   try {
     const { name, description, price, priceCurrency, category } = req.body;
-
+    
     if (!name || !description || !price || !priceCurrency || !category || !req.file) {
-      return res.status(400).json({ error: "All fields are required, including an image" });
+      return res.status(400).json({ error: "All fields are required" });
     }
 
     // Upload image to ImageKit
     const uploadedImage = await imagekit.upload({
       file: req.file.buffer.toString("base64"),
-      fileName: req.file.originalname,
-      folder: "/products",
+      fileName: `guest_${Date.now()}_${req.file.originalname}`,
+      folder: "/products/guest",
     });
 
-    // Create new product without user ID
-    const newProduct = new Product({
+    // Create product with guest session
+    const product = new Product({
       name,
       description,
       price,
       priceCurrency,
       category,
       image: uploadedImage.url,
-      user: null, // No user assigned
+      isGuestProduct: true
     });
 
-    await newProduct.save();
+    await product.save();
 
-    res.status(201).json({ message: "Product uploaded successfully", product: newProduct });
+    res.status(201).json({
+      success: true,
+      product,
+      message: "Product saved. Please login to claim it."
+    });
+
   } catch (err) {
-    console.error("Error uploading product:", err);
-    res.status(500).json({ error: "Failed to upload product", details: err.message });
+    console.error("Guest upload error:", err);
+    res.status(500).json({ 
+      success: false,
+      error: "Failed to upload product"
+    });
+  }
+});
+// Claim guest products after login
+app.post('/api/products/claim-guest', async (req, res) => {
+  try {
+    const { guestSession, userId } = req.body;
+
+    // Validate inputs
+    if (!guestSession) {
+      return res.status(400).json({ message: "Missing guest session ID" });
+    }
+    if (!userId) {
+      return res.status(400).json({ message: "User ID required - please login" });
+    }
+
+    // Check if user exists
+    const userExists = await User.exists({ _id: userId });
+    if (!userExists) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    // Rest of your claim logic...
+    
+  } catch (error) {
+    console.error("Claim error:", error);
+    res.status(500).json({ 
+      success: false,
+      message: error.message || "Failed to claim products" 
+    });
+  }
+});
+
+// ✅ Claim Guest Products After Login (modify your existing login route)
+app.post("/api/login", async (req, res) => {
+  const { email, password, guestSession } = req.body;
+  
+  try {
+    const user = await User.findOne({ email });
+    if (!user) return res.status(400).json({ message: "Invalid credentials" });
+
+    const isMatch = await bcrypt.compare(password, user.password);
+    if (!isMatch) return res.status(400).json({ message: "Invalid credentials" });
+
+    // Generate token
+    const token = jwt.sign({ userId: user._id, role: user.role }, process.env.JWT_SECRET, { expiresIn: "7d" });
+
+    // Check for guest products to claim
+    const sessionToCheck = guestSession || req.cookies.guestSession;
+    let claimedProducts = [];
+
+    if (sessionToCheck) {
+      // Find and claim guest products
+      claimedProducts = await Product.find({ 
+        guestSession: sessionToCheck,
+        isGuestProduct: true 
+      });
+
+      if (claimedProducts.length > 0) {
+        // Update products with user ID
+        await Product.updateMany(
+          { _id: { $in: claimedProducts.map(p => p._id) } },
+          { 
+            $set: { user: user._id, isGuestProduct: false },
+            $unset: { guestSession: 1 }
+          }
+        );
+
+        // Add to user's products array
+        await User.findByIdAndUpdate(
+          user._id,
+          { $addToSet: { products: { $each: claimedProducts.map(p => p._id) } } }
+        );
+      }
+
+      // Clear guest session cookie
+      res.clearCookie("guestSession");
+    }
+
+    // Set auth cookie
+    res.cookie("token", token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "strict",
+    });
+
+    res.status(200).json({
+      message: `Login successful${claimedProducts.length ? ` (${claimedProducts.length} products claimed)` : ''}`,
+      user: {
+        _id: user._id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+      },
+      token,
+      claimedProducts: claimedProducts.length
+    });
+
+  } catch (error) {
+    console.error("Login error:", error);
+    res.status(500).json({ message: "Server error", error: error.message });
   }
 });
 

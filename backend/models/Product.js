@@ -25,6 +25,8 @@ const productSchema = new mongoose.Schema({
     // required: true
   },
   isTrending: { type: Boolean, default: false },
+  guestSession: { type: String },
+  isGuestProduct: { type: Boolean, default: false },
   reviews: [reviewSchema],  // Array of reviews
   createdAt: { type: Date, default: Date.now },
 });

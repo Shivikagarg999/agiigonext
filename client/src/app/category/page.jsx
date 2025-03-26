@@ -1,5 +1,4 @@
 "use client";
-
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 
@@ -20,11 +19,8 @@ export default function BrowseByCategory() {
 
         const data = await res.json();
         let uniqueCategories = [...new Set(data.map((product) => product.category))];
-
-        // Limit to 6 categories (fits 2 rows max on mobile)
         uniqueCategories = uniqueCategories.sort(() => 0.5 - Math.random()).slice(0, 6);
 
-        // Assign a random product image for each category
         const categoryData = uniqueCategories.map((category) => {
           const productsInCategory = data.filter((product) => product.category === category);
           const randomProduct = productsInCategory[Math.floor(Math.random() * productsInCategory.length)];
@@ -49,26 +45,36 @@ export default function BrowseByCategory() {
   };
 
   return (
-    <div className="w-full bg-white py-8">
-      <h2 className="text-2xl font-bold text-center mb-6 text-black">What are you shopping for today?</h2>
+    <div className="w-full bg-white py-12 px-4 sm:px-6 lg:px-8">
+      <div className="max-w-7xl mx-auto">
+        <div className="text-center mb-12">
+          <h2 className="text-3xl font-bold text-gray-900">Shop by Category</h2>
+          <p className="mt-2 text-lg text-gray-600">Browse our popular collections</p>
+        </div>
 
-      {/* Responsive grid for 2-row max on mobile, 1 row on larger screens */}
-      <div className="grid grid-cols-3 gap-4 sm:grid-cols-3 md:grid-cols-6 px-4 lg:px-16">
-        {categories.map(({ name, image }) => (
-          <button
-            key={name}
-            className="flex flex-col items-center space-y-2 hover:scale-105 transition w-[100px] h-[140px] sm:w-[120px] sm:h-[160px] md:w-[140px] md:h-[180px] mx-auto"
-            onClick={() => handleCategoryClick(name)}
-          >
-            <img
-              src={image}
-              alt={name}
-              className="w-[80px] h-[80px] sm:w-[100px] sm:h-[100px] md:w-[120px] md:h-[120px] object-cover rounded-full border shadow-md"
-              onError={(e) => (e.target.src = "/images/categories/default.jpg")}
-            />
-            <span className="text-xs sm:text-sm font-semibold text-center text-black">{name}</span>
-          </button>
-        ))}
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-4">
+          {categories.map(({ name, image }) => (
+            <div 
+              key={name}
+              className="group relative bg-white rounded-xl shadow-sm hover:shadow-md transition-all duration-200 border border-gray-100 overflow-hidden"
+              onClick={() => handleCategoryClick(name)}
+            >
+              <div className="aspect-square w-full flex items-center justify-center p-4">
+                <img
+                  src={image}
+                  alt={name}
+                  className="h-[120px] w-[120px] object-contain transition-transform duration-300 group-hover:scale-105"
+                  onError={(e) => (e.target.src = "/images/categories/default.jpg")}
+                />
+              </div>
+              <div className="p-4 pt-0 text-center">
+                <h3 className="font-medium text-gray-900 group-hover:text-orange-600 transition-colors">
+                  {name}
+                </h3>
+              </div>
+            </div>
+          ))}
+        </div>
       </div>
     </div>
   );
