@@ -573,14 +573,72 @@ app.post("/api/cart/add", async (req, res) => {
   }
 });
 
-// ✅ Get Cart Route
-app.get("/api/cart", authMiddleware, async (req, res) => {
+app.get('/api/cart', async (req, res) => {
   try {
-    const cart = await Cart.findOne({ userId: req.user.userId }).populate("items.productId");
-    if (!cart) return res.status(404).json({ message: "Cart is empty" });
-    res.status(200).json(cart);
-  } catch (error) {
-    res.status(500).json({ message: "Server error", error: error.message });
+    const { userId } = req.query;
+    
+    if (!userId) {
+      return res.status(400).json({ message: "User ID is required" });
+    }
+
+    const cart = await Cart.findOne({ userId })
+      .populate({
+        path: 'items.productId',
+        model: 'Product'
+      });
+
+    if (!cart) {
+      return res.status(404).json({ message: "Cart not found" });
+    }
+
+    res.json(cart);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
+// POST /api/cart/remove - Remove item from cart
+app.post('/api/cart/remove', async (req, res) => {
+  try {
+    const { userId, productId } = req.body;
+    
+    if (!userId || !productId) {
+      return res.status(400).json({ message: 'User ID and product ID are required' });
+    }
+
+    // Find the cart and populate product prices for accurate recalculation
+    const cart = await Cart.findOne({ userId });
+    if (!cart) return res.status(404).json({ message: 'Cart not found' });
+
+    // Filter out the item (using productId as per your schema)
+    const initialItemCount = cart.items.length;
+    cart.items = cart.items.filter(item => item.productId.toString() !== productId);
+    
+    if (cart.items.length === initialItemCount) {
+      return res.status(404).json({ message: 'Product not found in cart' });
+    }
+
+    // Recalculate total using priceAtTimeOfAddition
+    cart.totalPrice = cart.items.reduce(
+      (total, item) => total + (item.priceAtTimeOfAddition * item.quantity), 
+      0
+    );
+
+    // Save and return populated cart
+    await cart.save();
+    const populatedCart = await Cart.findById(cart._id).populate('items.productId');
+    
+    res.json({
+      message: 'Product removed from cart',
+      cart: populatedCart
+    });
+    
+  } catch (err) {
+    console.error('Error removing item:', err);
+    res.status(500).json({ 
+      message: 'Internal server error',
+      error: err.message 
+    });
   }
 });
 

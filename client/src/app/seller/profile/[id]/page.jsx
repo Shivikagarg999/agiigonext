@@ -28,7 +28,7 @@ export default function SellerProfile() {
         const parsedUser = JSON.parse(userData);
 
         if (!id || parsedUser._id !== id) {
-            router.push("/login"); // Prevent access to other seller profiles
+            router.push("/login"); 
             return;
         }
 

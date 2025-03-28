@@ -5,6 +5,9 @@ import Nav from "@/app/nav/Nav";
 import Footer from "@/app/footer/Footer";
 import Link from "next/link";
 import Cookies from "js-cookie";
+import { toast, ToastContainer } from "react-toastify";
+import { FaCheckCircle, FaShoppingCart } from "react-icons/fa";
+import "react-toastify/dist/ReactToastify.css";
 
 export default function ProductDetails() {
   const { id } = useParams();
@@ -14,6 +17,7 @@ export default function ProductDetails() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [user, setUser] = useState(null);
+  const [isAddingToCart, setIsAddingToCart] = useState(false);
 
   useEffect(() => {
     async function fetchProduct() {
@@ -22,10 +26,10 @@ export default function ProductDetails() {
         if (!res.ok) throw new Error("Failed to fetch product details");
 
         const data = await res.json();
-        console.log("Fetched product:", data);
         setProduct(data);
       } catch (err) {
         setError(err.message);
+        toast.error("Failed to load product details");
       } finally {
         setLoading(false);
       }
@@ -35,8 +39,8 @@ export default function ProductDetails() {
   }, [id]);
 
   useEffect(() => {
-    let token = Cookies.get("token") || localStorage.getItem("token");
-    let userData = Cookies.get("user") || localStorage.getItem("user");
+    const token = Cookies.get("token") || localStorage.getItem("token");
+    const userData = Cookies.get("user") || localStorage.getItem("user");
 
     if (userData) {
       try {
@@ -50,11 +54,12 @@ export default function ProductDetails() {
 
   const addToCart = async () => {
     if (!user) {
-      alert("Please log in to add items to your cart.");
+      toast.info("Please log in to add items to your cart");
       router.push("/login");
       return;
     }
 
+    setIsAddingToCart(true);
     try {
       const res = await fetch("https://api.agiigo.com/api/cart/add", {
         method: "POST",
@@ -62,108 +67,187 @@ export default function ProductDetails() {
           "Content-Type": "application/json",
         },
         credentials: "include",
-        body: JSON.stringify({ productId: product._id, quantity, userId: user._id }),
+        body: JSON.stringify({ 
+          productId: product._id, 
+          quantity,
+          userId: user._id 
+        }),
       });
 
       const data = await res.json();
-      if (!res.ok) throw new Error(data.message);
+      if (!res.ok) throw new Error(data.message || "Failed to add to cart");
 
-      alert("Product added to cart!");
-      console.log("Cart updated:", data);
+      // Success notification with checkmark icon
+      toast.success(
+        <div className="flex items-center gap-2">
+          <FaCheckCircle className="text-green-500 text-lg" />
+          <span>"{product.name}" added to cart!</span>
+        </div>,
+        {
+          position: "top-right",
+          autoClose: 3000,
+          hideProgressBar: false,
+          closeOnClick: true,
+          pauseOnHover: true,
+          draggable: true,
+        }
+      );
+
     } catch (error) {
       console.error("Error adding to cart:", error);
-      alert(error.message);
+      toast.error(error.message || "Failed to add to cart");
+    } finally {
+      setIsAddingToCart(false);
     }
   };
 
   const buyNow = () => {
-    console.log("Buying now:", product);
+    addToCart().then(() => {
+      router.push("/checkout");
+    });
   };
 
-  if (loading) return <p className="text-center text-gray-500">Loading...</p>;
-  if (error) return <p className="text-center text-red-500">{error}</p>;
-  if (!product) return <p className="text-center text-gray-500">Product not found.</p>;
+  if (loading) return (
+    <div className="bg-white text-black min-h-screen">
+      <Nav />
+      <div className="container mx-auto px-4 py-20 text-center">
+        <p className="text-gray-500">Loading product details...</p>
+      </div>
+      <Footer />
+    </div>
+  );
+
+  if (error) return (
+    <div className="bg-white text-black min-h-screen">
+      <Nav />
+      <div className="container mx-auto px-4 py-20 text-center">
+        <p className="text-red-500">{error}</p>
+        <button 
+          onClick={() => router.push("/products")}
+          className="mt-4 bg-[#EB8426] text-white py-2 px-6 rounded-lg hover:bg-orange-700 transition"
+        >
+          Browse Products
+        </button>
+      </div>
+      <Footer />
+    </div>
+  );
+
+  if (!product) return (
+    <div className="bg-white text-black min-h-screen">
+      <Nav />
+      <div className="container mx-auto px-4 py-20 text-center">
+        <p className="text-gray-500">Product not found</p>
+        <button 
+          onClick={() => router.push("/products")}
+          className="mt-4 bg-[#EB8426] text-white py-2 px-6 rounded-lg hover:bg-orange-700 transition"
+        >
+          Browse Products
+        </button>
+      </div>
+      <Footer />
+    </div>
+  );
 
   return (
-    <div className="bg-white text-black">
+    <div className="bg-white text-black min-h-screen flex flex-col">
       <Nav />
-      <div className="container mt-12 px-4 py-10 bg-white">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-12 items-start">
-          {/* Product Image */}
-          <div className="w-full flex justify-center">
-            <img
-              src={product.image || "/default-product.jpg"}
-              alt={product.name}
-              className="w-full max-w-md h-auto object-cover rounded-lg shadow-lg"
-            />
-          </div>
-
-          {/* Product Details */}
-          <div className="space-y-6">
-            <h1 className="text-3xl font-bold text-gray-900">{product.name}</h1>
-            <p className="text-xl text-gray-700 font-semibold">
-              {product.price} {product.priceCurrency}
-            </p>
-            <p className="text-gray-600">{product.description}</p>
-
-            {/* Quantity Selector */}
-            <div className="flex items-center gap-4">
-              <span className="font-semibold text-gray-800">Quantity:</span>
-              <div className="flex items-center border rounded-lg overflow-hidden">
-                <button
-                  className="px-4 py-2 bg-gray-200 hover:bg-gray-300"
-                  onClick={() => setQuantity((prev) => Math.max(1, prev - 1))}
-                >
-                  −
-                </button>
-                <span className="px-6 py-2 bg-white text-gray-900 font-medium">{quantity}</span>
-                <button
-                  className="px-4 py-2 bg-gray-200 hover:bg-gray-300"
-                  onClick={() => setQuantity((prev) => prev + 1)}
-                >
-                  +
-                </button>
+      <ToastContainer />
+      <main className="flex-grow">
+        <div className="container mx-auto px-4 py-10">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 lg:gap-12 items-start">
+            {/* Product Image */}
+            <div className="w-full flex justify-center">
+              <div className="relative w-full max-w-md">
+                <img
+                  src={product.image || "/default-product.jpg"}
+                  alt={product.name}
+                  className="w-full h-auto object-cover rounded-lg shadow-lg"
+                  onError={(e) => {
+                    e.target.src = "/default-product.jpg";
+                  }}
+                />
+                {product.discount > 0 && (
+                  <div className="absolute top-2 left-2 bg-red-600 text-white text-sm font-bold px-2 py-1 rounded">
+                    {product.discount}% OFF
+                  </div>
+                )}
               </div>
             </div>
 
-            {/* Seller Details */}
-            {product.user && (
-              <div className="p-4 border rounded-lg flex items-center gap-4">
-                {product.user.pfp && (
-                  <img
-                    src={product.user.pfp}
-                    alt={product.user.name}
-                    className="w-20 h-20 rounded-full object-cover"
-                  />
-                )}
-                <div>
-                  <h3 className="text-lg font-semibold text-gray-800">Seller</h3>
-                  <Link href={`/seller/${product.user._id}`} className="text-blue-600 hover:underline">
-                    {product.user.name}
-                  </Link>
+            {/* Product Details */}
+            <div className="space-y-6">
+              <div>
+                <h1 className="text-3xl font-bold text-gray-900">{product.name}</h1>
+                <div className="flex items-center gap-4 mt-2">
+                  <p className="text-2xl text-gray-700 font-semibold">
+                    {product.price} {product.priceCurrency}
+                  </p>
+                  {product.originalPrice && (
+                    <p className="text-lg text-gray-500 line-through">
+                      {product.originalPrice} {product.priceCurrency}
+                    </p>
+                  )}
                 </div>
               </div>
-            )}
 
-            {/* Buttons */}
-            <div className="flex flex-col sm:flex-row gap-4">
-              <button
-                className="bg-[#EB8426] text-white py-3 px-6 rounded-lg hover:bg-orange-700 transition w-full sm:w-auto"
-                onClick={addToCart}
-              >
-                Add to Cart
-              </button>
+              <div className="prose max-w-none text-gray-600">
+                {product.description}
+              </div>
 
-              <button
-                className="border border-[#EB8426] text-[#EB8426] py-3 px-6 rounded-lg hover:bg-[#EB8426] hover:text-white transition w-full sm:w-auto"
-                onClick={buyNow}
-              >
-                Buy Now
-              </button>
+              {/* Quantity Selector */}
+              <div className="flex items-center gap-4 pt-4 border-t">
+                <span className="font-semibold text-gray-800">Quantity:</span>
+                <div className="flex items-center border rounded-lg overflow-hidden">
+                  <button
+                    className="px-4 py-2 bg-gray-100 hover:bg-gray-200 transition"
+                    onClick={() => setQuantity((prev) => Math.max(1, prev - 1))}
+                    disabled={quantity <= 1}
+                  >
+                    −
+                  </button>
+                  <span className="px-6 py-2 bg-white text-gray-900 font-medium">
+                    {quantity}
+                  </span>
+                  <button
+                    className="px-4 py-2 bg-gray-100 hover:bg-gray-200 transition"
+                    onClick={() => setQuantity((prev) => prev + 1)}
+                  >
+                    +
+                  </button>
+                </div>
+              </div>
+
+              {/* Buttons */}
+              <div className="flex flex-col sm:flex-row gap-4 pt-4">
+                <button
+                  className={`flex items-center justify-center gap-2 bg-[#EB8426] text-white py-3 px-6 rounded-lg hover:bg-orange-700 transition w-full sm:w-auto ${
+                    isAddingToCart ? "opacity-70 cursor-not-allowed" : ""
+                  }`}
+                  onClick={addToCart}
+                  disabled={isAddingToCart}
+                >
+                  {isAddingToCart ? (
+                    "Adding..."
+                  ) : (
+                    <>
+                      <FaShoppingCart />
+                      <span>Add to Cart</span>
+                    </>
+                  )}
+                </button>
+
+                <button
+                  className="border border-[#EB8426] text-[#EB8426] py-3 px-6 rounded-lg hover:bg-[#EB8426] hover:text-white transition w-full sm:w-auto"
+                  onClick={buyNow}
+                >
+                  Buy Now
+                </button>
+              </div>
             </div>
           </div>
         </div>
-      </div>
+      </main>
       <Footer />
     </div>
   );
