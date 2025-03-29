@@ -7,6 +7,7 @@ import { FaStar, FaRegStar, FaStarHalfAlt } from "react-icons/fa";
 import Nav from "../nav/Nav";
 import Footer from "../footer/Footer";
 import TopBar from "../components/TopBar";
+import BrowseByCategory from "../category/page";
 
 function ProductsContent() {
   const [products, setProducts] = useState([]);
@@ -141,7 +142,7 @@ function ProductsContent() {
         <div className="relative w-full h-auto max-h-[96vh] flex items-center justify-center overflow-hidden rounded-lg">
           <img src="/images/prod.jpeg" alt="Shop Banner" className="w-full h-auto object-cover" />
         </div>
-
+      <BrowseByCategory/>
         <div className="mt-10 flex flex-col md:flex-row gap-8">
           <aside className="w-full md:w-1/4 bg-white shadow rounded-lg p-6">
             <div className="flex justify-between items-center mb-4">

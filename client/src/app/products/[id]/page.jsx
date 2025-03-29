@@ -3,11 +3,11 @@ import { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Nav from "@/app/nav/Nav";
 import Footer from "@/app/footer/Footer";
-import Link from "next/link";
 import Cookies from "js-cookie";
 import { toast, ToastContainer } from "react-toastify";
 import { FaCheckCircle, FaShoppingCart } from "react-icons/fa";
 import "react-toastify/dist/ReactToastify.css";
+import BrowseByCategory from "../../category/page";
 
 export default function ProductDetails() {
   const { id } = useParams();
@@ -77,7 +77,6 @@ export default function ProductDetails() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.message || "Failed to add to cart");
 
-      // Success notification with checkmark icon
       toast.success(
         <div className="flex items-center gap-2">
           <FaCheckCircle className="text-green-500 text-lg" />
@@ -92,7 +91,6 @@ export default function ProductDetails() {
           draggable: true,
         }
       );
-
     } catch (error) {
       console.error("Error adding to cart:", error);
       toast.error(error.message || "Failed to add to cart");
@@ -108,11 +106,53 @@ export default function ProductDetails() {
   };
 
   if (loading) return (
-    <div className="bg-white text-black min-h-screen">
+    <div className="bg-white text-black min-h-screen flex flex-col">
       <Nav />
-      <div className="container mx-auto px-4 py-20 text-center">
-        <p className="text-gray-500">Loading product details...</p>
-      </div>
+      <BrowseByCategory />
+      <main className="flex-grow">
+        <div className="container mx-auto px-4 py-10">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 lg:gap-12 items-start">
+            {/* Product Image Skeleton - Matches exact dimensions */}
+            <div className="w-full flex justify-center">
+              <div className="relative w-full max-w-md aspect-square bg-gray-200 rounded-lg animate-pulse"></div>
+            </div>
+
+            {/* Product Details Skeleton - Matches exact structure */}
+            <div className="space-y-6">
+              <div>
+                <div className="h-8 bg-gray-200 rounded-full w-3/4 animate-pulse mb-4"></div>
+                <div className="flex items-center gap-4 mt-2">
+                  <div className="h-8 bg-gray-200 rounded-full w-1/4 animate-pulse"></div>
+                  <div className="h-6 bg-gray-200 rounded-full w-1/4 animate-pulse"></div>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <div className="h-4 bg-gray-200 rounded-full animate-pulse"></div>
+                <div className="h-4 bg-gray-200 rounded-full animate-pulse"></div>
+                <div className="h-4 bg-gray-200 rounded-full w-5/6 animate-pulse"></div>
+                <div className="h-4 bg-gray-200 rounded-full w-2/3 animate-pulse"></div>
+              </div>
+
+              {/* Quantity Selector Skeleton */}
+              <div className="flex items-center gap-4 pt-4 border-t border-gray-200">
+                <div className="h-5 bg-gray-200 rounded-full w-20 animate-pulse"></div>
+                <div className="flex items-center border rounded-lg overflow-hidden">
+                  <div className="w-10 h-10 bg-gray-200 animate-pulse"></div>
+                  <div className="w-12 h-10 bg-gray-100 animate-pulse"></div>
+                  <div className="w-10 h-10 bg-gray-200 animate-pulse"></div>
+                </div>
+              </div>
+
+              {/* Buttons Skeleton */}
+              <div className="flex flex-col sm:flex-row gap-4 pt-4">
+                <div className="h-12 bg-gray-200 rounded-lg animate-pulse w-full sm:w-40"></div>
+                <div className="h-12 bg-gray-200 rounded-lg animate-pulse w-full sm:w-40"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </main>
       <Footer />
     </div>
   );
@@ -153,6 +193,7 @@ export default function ProductDetails() {
     <div className="bg-white text-black min-h-screen flex flex-col">
       <Nav />
       <ToastContainer />
+      <BrowseByCategory/>
       <main className="flex-grow">
         <div className="container mx-auto px-4 py-10">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8 lg:gap-12 items-start">
