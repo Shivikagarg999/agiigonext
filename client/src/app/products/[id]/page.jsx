@@ -8,6 +8,7 @@ import { toast, ToastContainer } from "react-toastify";
 import { FaCheckCircle, FaShoppingCart } from "react-icons/fa";
 import "react-toastify/dist/ReactToastify.css";
 import BrowseByCategory from "../../category/page";
+import DOMPurify from 'dompurify';
 
 export default function ProductDetails() {
   const { id } = useParams();
@@ -51,6 +52,13 @@ export default function ProductDetails() {
       }
     }
   }, []);
+
+  const sanitizeHTML = (html) => {
+    if (typeof window !== 'undefined') {
+      return DOMPurify.sanitize(html);
+    }
+    return html;
+  };
 
   const addToCart = async () => {
     if (!user) {
@@ -112,12 +120,10 @@ export default function ProductDetails() {
       <main className="flex-grow">
         <div className="container mx-auto px-4 py-10">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8 lg:gap-12 items-start">
-            {/* Product Image Skeleton - Matches exact dimensions */}
             <div className="w-full flex justify-center">
               <div className="relative w-full max-w-md aspect-square bg-gray-200 rounded-lg animate-pulse"></div>
             </div>
 
-            {/* Product Details Skeleton - Matches exact structure */}
             <div className="space-y-6">
               <div>
                 <div className="h-8 bg-gray-200 rounded-full w-3/4 animate-pulse mb-4"></div>
@@ -134,7 +140,6 @@ export default function ProductDetails() {
                 <div className="h-4 bg-gray-200 rounded-full w-2/3 animate-pulse"></div>
               </div>
 
-              {/* Quantity Selector Skeleton */}
               <div className="flex items-center gap-4 pt-4 border-t border-gray-200">
                 <div className="h-5 bg-gray-200 rounded-full w-20 animate-pulse"></div>
                 <div className="flex items-center border rounded-lg overflow-hidden">
@@ -144,7 +149,6 @@ export default function ProductDetails() {
                 </div>
               </div>
 
-              {/* Buttons Skeleton */}
               <div className="flex flex-col sm:flex-row gap-4 pt-4">
                 <div className="h-12 bg-gray-200 rounded-lg animate-pulse w-full sm:w-40"></div>
                 <div className="h-12 bg-gray-200 rounded-lg animate-pulse w-full sm:w-40"></div>
@@ -232,12 +236,14 @@ export default function ProductDetails() {
                 </div>
               </div>
 
-              <div className="prose max-w-none text-gray-600">
-                {product.description}
-              </div>
+              {/* Updated Description Section */}
+              <div 
+                className="prose max-w-none text-gray-600"
+                dangerouslySetInnerHTML={{ __html: sanitizeHTML(product.description) }} 
+              />
 
               {/* Quantity Selector */}
-              <div className="flex items-center gap-4 pt-4 border-t">
+              <div className="flex items-center gap-4 pt-4 border-t border-gray-200">
                 <span className="font-semibold text-gray-800">Quantity:</span>
                 <div className="flex items-center border rounded-lg overflow-hidden">
                   <button

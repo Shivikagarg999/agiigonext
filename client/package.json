@@ -12,6 +12,7 @@
     "@heroicons/react": "^2.2.0",
     "@shadcn/ui": "^0.0.4",
     "axios": "^1.8.3",
+    "dompurify": "^3.2.4",
     "framer-motion": "^12.4.7",
     "js-cookie": "^3.0.5",
     "jsonwebtoken": "^9.0.2",
@@ -26,6 +27,7 @@
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",
+    "@types/dompurify": "^3.0.5",
     "eslint": "^9",
     "eslint-config-next": "15.1.6",
     "postcss": "^8",
