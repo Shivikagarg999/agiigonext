@@ -54,7 +54,7 @@ export default function RegisterPage() {
         onSubmit={handleSubmit}
         className="bg-white p-6 rounded-lg shadow-lg w-96"
       >
-        <h2 className="text-2xl text-black font-bold mb-4 text-center">Register</h2>
+        <h2 className="text-2xl text-[#EB8426] font-bold mb-4 text-center">Register to Buy</h2>
         {message && (
           <p className="text-green-600 text-center mb-2">{message}</p>
         )}
