@@ -137,6 +137,7 @@ export default function Nav() {
 
             <a href="/shop" className="font-medium text-gray-800 hover:text-orange-500 transition-colors">Shop</a>
             <a href="/about" className="font-medium text-gray-800 hover:text-orange-500 transition-colors">About</a>
+            <a href="https://sellerhub.agiigo.com/login" className="font-medium text-gray-800 hover:text-orange-500 transition-colors">Sell with us</a>
            </div>
 
           {/* Right Side Icons */}
@@ -215,6 +216,13 @@ export default function Nav() {
                 onClick={() => setIsMenuOpen(false)}
               >
                 About
+              </a>
+              <a 
+                href="https://sellerhub.agiigo.com/login" 
+                className="block py-2 font-medium text-gray-800 hover:text-orange-500 transition-colors"
+                onClick={() => setIsMenuOpen(false)}
+              >
+                Sell with us
               </a>
             </div>
           </div>

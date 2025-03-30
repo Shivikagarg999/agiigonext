@@ -1,17 +1,16 @@
-"use client";
+"use client"
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Nav from "../nav/Nav";
 import Footer from "../footer/Footer";
-const api_url = process.env.NEXT_PUBLIC_API_URL;
 
 export default function RegisterPage() {
   const router = useRouter();
   const [formData, setFormData] = useState({
     name: "",
     email: "",
-    role: "buyer",
+    role: "buyer", // Automatically set to "buyer"
     password: "",
     contact: "",
   });
@@ -77,15 +76,6 @@ export default function RegisterPage() {
           required
           className="w-full px-3 py-2 mb-3 border rounded"
         />
-        <select
-          name="role"
-          value={formData.role}
-          onChange={handleChange}
-          className="w-full px-3 py-2 text-gray-600 mb-3 border rounded"
-        >
-          <option value="buyer">Buyer</option>
-          <option value="seller">Seller</option>
-        </select>
         <input
           type="password"
           name="password"
