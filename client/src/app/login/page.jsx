@@ -32,7 +32,7 @@ export default function LoginForm() {
 
       if (!res.ok) throw new Error(data.message || "Login failed");
 
-      // ✅ Store token and user data in localStorage
+      // Store token and user data in localStorage
       localStorage.setItem("token", data.token);
       localStorage.setItem("user", JSON.stringify(data.user));
 

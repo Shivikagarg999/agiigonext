@@ -1,16 +1,31 @@
 "use client";
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
-import { ChevronDown, Search, ShoppingCart, User, Menu, X } from "lucide-react";
+import Link from "next/link";
+import { ChevronDown, Search, ShoppingCart, User, Menu, X, LogOut } from "lucide-react";
 
 export default function Nav() {
   const [categories, setCategories] = useState([]);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isCategoriesOpen, setIsCategoriesOpen] = useState(false);
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [user, setUser] = useState(null);
   const dropdownRef = useRef(null);
   const router = useRouter();
 
   useEffect(() => {
+    // Check if user is logged in
+    const token = localStorage.getItem("token");
+    const userData = localStorage.getItem("user");
+    
+    if (token && userData) {
+      setIsLoggedIn(true);
+      setUser(JSON.parse(userData));
+    } else {
+      setIsLoggedIn(false);
+      setUser(null);
+    }
+
     const fetchCategories = async () => {
       try {
         const res = await fetch("https://api.agiigo.com/api/products");
@@ -23,7 +38,6 @@ export default function Nav() {
     fetchCategories();
   }, []);
 
-  // Handle window resize for better mobile experience
   useEffect(() => {
     const handleResize = () => {
       if (window.innerWidth >= 1024) {
@@ -34,9 +48,8 @@ export default function Nav() {
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  // Improved hover handling with touch support
   const handleCategoryHover = (open) => {
-    if (window.innerWidth < 1024) return; // Disable hover on mobile
+    if (window.innerWidth < 1024) return;
     
     clearTimeout(hoverTimer);
     if (open) {
@@ -50,13 +63,28 @@ export default function Nav() {
     }
   };
 
-  const toggleCategories = () => {
+  const toggleCategories = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
     setIsCategoriesOpen(!isCategoriesOpen);
+  };
+
+  const handleCategoryClick = (category) => {
+    setIsCategoriesOpen(false);
+    setIsMenuOpen(false);
+    router.push(`/shop?category=${encodeURIComponent(category)}`);
+  };
+
+  const handleLogout = () => {
+    localStorage.removeItem("token");
+    localStorage.removeItem("user");
+    setIsLoggedIn(false);
+    setUser(null);
+    router.push("/");
   };
 
   let hoverTimer;
 
-  // Close dropdowns when clicking outside
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
@@ -64,20 +92,18 @@ export default function Nav() {
       }
     };
     document.addEventListener("mousedown", handleClickOutside);
+    document.addEventListener("touchstart", handleClickOutside);
     return () => {
       document.removeEventListener("mousedown", handleClickOutside);
+      document.removeEventListener("touchstart", handleClickOutside);
     };
   }, []);
 
   return (
     <nav className="bg-white shadow-sm sticky top-0 z-50 w-full">
       <div className="max-w-7xl mx-auto px-4 sm:px-6">
-        {/* Main Navigation Bar */}
         <div className="flex items-center justify-between h-16">
-          
-          {/* Logo and Mobile Menu Button */}
           <div className="flex items-center">
-            {/* Mobile menu button */}
             <button 
               className="lg:hidden p-2 rounded-md text-gray-500 hover:text-gray-900 focus:outline-none"
               onClick={() => setIsMenuOpen(!isMenuOpen)}
@@ -87,16 +113,15 @@ export default function Nav() {
               {isMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
             </button>
             
-            {/* Logo */}
             <div className="flex-shrink-0 ml-2 lg:ml-0">
-              <img src="/images/logo.jpg" alt="Logo" className="h-6" />
+              <Link href="/">
+                <img src="/images/logo.jpg" alt="Logo" className="h-6" />
+              </Link>
             </div>
           </div>
 
-          {/* Desktop Navigation */}
           <div className="hidden lg:flex items-center space-x-8">
-            
-          <a href="/" className="font-medium text-gray-800 hover:text-orange-500 transition-colors">Home</a>
+            <Link href="/" className="font-medium text-gray-800 hover:text-orange-500 transition-colors">Home</Link>
             <div 
               className="relative"
               ref={dropdownRef}
@@ -112,7 +137,6 @@ export default function Nav() {
                 <ChevronDown className={`ml-1 h-4 w-4 transition-transform ${isCategoriesOpen ? 'rotate-180' : ''}`} />
               </button>
 
-              {/* Desktop Dropdown */}
               {isCategoriesOpen && (
                 <div 
                   className="absolute left-0 mt-2 w-full min-w-[300px] max-w-md bg-white shadow-xl rounded-md border border-gray-200 overflow-hidden"
@@ -121,31 +145,51 @@ export default function Nav() {
                 >
                   <div className="grid grid-cols-2 gap-4 p-4">
                     {categories.map((category) => (
-                      <a
+                      <button
                         key={category}
-                        href={`/shop?category=${encodeURIComponent(category)}`}
-                        className="block p-3 rounded-md font-medium text-gray-700 hover:bg-orange-50 hover:text-orange-500 transition-colors"
-                        onClick={() => setIsCategoriesOpen(false)}
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          handleCategoryClick(category);
+                        }}
+                        className="block p-3 rounded-md font-medium text-gray-700 hover:bg-orange-50 hover:text-orange-500 transition-colors text-left"
                       >
                         {category}
-                      </a>
+                      </button>
                     ))}
                   </div>
                 </div>
               )}
             </div>
 
-            <a href="/shop" className="font-medium text-gray-800 hover:text-orange-500 transition-colors">Shop</a>
-            <a href="/about" className="font-medium text-gray-800 hover:text-orange-500 transition-colors">About</a>
+            <Link href="/shop" className="font-medium text-gray-800 hover:text-orange-500 transition-colors">Shop</Link>
+            <Link href="/about" className="font-medium text-gray-800 hover:text-orange-500 transition-colors">About</Link>
             <a href="https://sellerhub.agiigo.com/login" className="font-medium text-gray-800 hover:text-orange-500 transition-colors">Sell with us</a>
            </div>
 
-          {/* Right Side Icons */}
           <div className="flex items-center space-x-4 sm:space-x-6">
-            <div className="hidden sm:flex items-center space-x-2">
-              <User className="h-5 w-5 text-[#EB8426]" />
-              <a href="/login" className="text-[#EB8426] font-semibold text-sm sm:text-base">Login / Register</a>
-            </div>
+            {isLoggedIn ? (
+              <div className="flex items-center space-x-4">
+                <div className="hidden sm:flex items-center space-x-2">
+                  <User className="h-5 w-5 text-[#EB8426]" />
+                  <span className="text-[#EB8426] font-semibold text-sm sm:text-base">
+                    {user?.name || "Account"}
+                  </span>
+                </div>
+                <button 
+                  onClick={handleLogout}
+                  className="flex items-center space-x-1 text-gray-600 hover:text-orange-500 transition-colors"
+                >
+                  <LogOut className="h-5 w-5" />
+                  <span className="hidden sm:inline text-sm sm:text-base">Logout</span>
+                </button>
+              </div>
+            ) : (
+              <div className="hidden sm:flex items-center space-x-2">
+                <User className="h-5 w-5 text-[#EB8426]" />
+                <Link href="/login" className="text-[#EB8426] font-semibold text-sm sm:text-base">Login / Register</Link>
+              </div>
+            )}
             
             <div className="relative">
               <button 
@@ -161,62 +205,59 @@ export default function Nav() {
         </div>
       </div>
 
-      {/* Mobile Menu */}
       {isMenuOpen && (
         <div className="lg:hidden bg-white border-t">
           <div className="px-4 py-3 space-y-3">
-            {/* Mobile Login */}
             <div className="flex items-center space-x-2 py-2 sm:hidden">
               <User className="h-5 w-5 text-[#EB8426]" />
-              <a href="/login" className="text-[#EB8426] font-semibold">Login / Register</a>
+              {isLoggedIn ? (
+                <>
+                  <span className="text-[#EB8426] font-semibold">
+                    {user?.name || "Account"}
+                  </span>
+                  <button 
+                    onClick={handleLogout}
+                    className="ml-4 flex items-center space-x-1 text-gray-600 hover:text-orange-500 transition-colors"
+                  >
+                    <LogOut className="h-5 w-5" />
+                    <span>Logout</span>
+                  </button>
+                </>
+              ) : (
+                <Link href="/login" className="text-[#EB8426] font-semibold">Login / Register</Link>
+              )}
             </div>
             
-            <button 
-              className="w-full flex items-center justify-between py-2 font-medium text-gray-800"
-              onClick={toggleCategories}
-              aria-expanded={isCategoriesOpen}
+            <Link 
+              href="/categories" 
+              className="block py-2 font-medium text-gray-800 hover:text-orange-500 transition-colors"
+              onClick={() => setIsMenuOpen(false)}
             >
-              <span>Categories</span>
-              <ChevronDown className={`ml-1 h-4 w-4 transition-transform ${isCategoriesOpen ? 'rotate-180' : ''}`} />
-            </button>
-            
-            {isCategoriesOpen && (
-              <div className="pl-4 space-y-2">
-                {categories.map((category) => (
-                  <a
-                    key={category}
-                    href={`/shop?category=${encodeURIComponent(category)}`}
-                    className="block py-2 text-gray-700 hover:text-orange-500 transition-colors"
-                    onClick={() => setIsMenuOpen(false)}
-                  >
-                    {category}
-                  </a>
-                ))}
-              </div>
-            )}
+              Categories
+            </Link>
             
             <div className="pt-2 space-y-3 border-t mt-2">
-            <a 
+              <Link 
                 href="/" 
                 className="block py-2 font-medium text-gray-800 hover:text-orange-500 transition-colors"
                 onClick={() => setIsMenuOpen(false)}
               >
                 Home
-              </a>
-              <a 
+              </Link>
+              <Link 
                 href="/shop" 
                 className="block py-2 font-medium text-gray-800 hover:text-orange-500 transition-colors"
                 onClick={() => setIsMenuOpen(false)}
               >
                 Shop
-              </a>
-              <a 
+              </Link>
+              <Link 
                 href="/about" 
                 className="block py-2 font-medium text-gray-800 hover:text-orange-500 transition-colors"
                 onClick={() => setIsMenuOpen(false)}
               >
                 About
-              </a>
+              </Link>
               <a 
                 href="https://sellerhub.agiigo.com/login" 
                 className="block py-2 font-medium text-gray-800 hover:text-orange-500 transition-colors"
