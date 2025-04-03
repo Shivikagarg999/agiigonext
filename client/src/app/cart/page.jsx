@@ -264,7 +264,7 @@ export default function CartPage() {
               <div className="text-center text-sm text-gray-500">
                 <p>or</p>
                 <Link 
-                  href="/products"
+                  href="/shop"
                   className="text-[#EB8426] hover:underline font-medium inline-block mt-2"
                 >
                   Continue Shopping

@@ -15,6 +15,7 @@ const jwt = require("jsonwebtoken");
 const ImageKit = require("imagekit");
 const Cart = require("./models/Cart")
 const subscriberRoutes = require("./routes/subscribers")
+const userRoutes = require("./routes/userRoutes")
 
 
 // Middleware
@@ -50,11 +51,10 @@ mongoose
   };  
 
 
-
     
 // Routes
 app.use('/api/subscribers', subscriberRoutes);
-
+app.use('/api/userprofile', userRoutes);
 
   // app.post("/api/login", async (req, res) => {
   //   const { email, password } = req.body;

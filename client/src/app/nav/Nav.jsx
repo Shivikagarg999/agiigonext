@@ -2,7 +2,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { ChevronDown, Search, ShoppingCart, User, Menu, X, LogOut } from "lucide-react";
+import { ChevronDown, ShoppingCart, User, Menu, X, LogOut } from "lucide-react";
 
 export default function Nav() {
   const [categories, setCategories] = useState([]);
@@ -10,11 +10,12 @@ export default function Nav() {
   const [isCategoriesOpen, setIsCategoriesOpen] = useState(false);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [user, setUser] = useState(null);
+  const [isProfileDropdownOpen, setIsProfileDropdownOpen] = useState(false);
   const dropdownRef = useRef(null);
+  const profileDropdownRef = useRef(null);
   const router = useRouter();
 
   useEffect(() => {
-    // Check if user is logged in
     const token = localStorage.getItem("token");
     const userData = localStorage.getItem("user");
     
@@ -48,14 +49,25 @@ export default function Nav() {
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+        setIsCategoriesOpen(false);
+      }
+      if (profileDropdownRef.current && !profileDropdownRef.current.contains(event.target)) {
+        setIsProfileDropdownOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
   const handleCategoryHover = (open) => {
     if (window.innerWidth < 1024) return;
-    
-    clearTimeout(hoverTimer);
     if (open) {
       setIsCategoriesOpen(true);
     } else {
-      hoverTimer = setTimeout(() => {
+      setTimeout(() => {
         if (!dropdownRef.current?.matches(':hover')) {
           setIsCategoriesOpen(false);
         }
@@ -63,16 +75,8 @@ export default function Nav() {
     }
   };
 
-  const toggleCategories = (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setIsCategoriesOpen(!isCategoriesOpen);
-  };
-
-  const handleCategoryClick = (category) => {
-    setIsCategoriesOpen(false);
-    setIsMenuOpen(false);
-    router.push(`/shop?category=${encodeURIComponent(category)}`);
+  const toggleProfileDropdown = () => {
+    setIsProfileDropdownOpen(!isProfileDropdownOpen);
   };
 
   const handleLogout = () => {
@@ -80,29 +84,15 @@ export default function Nav() {
     localStorage.removeItem("user");
     setIsLoggedIn(false);
     setUser(null);
+    setIsProfileDropdownOpen(false);
     router.push("/");
   };
-
-  let hoverTimer;
-
-  useEffect(() => {
-    const handleClickOutside = (event) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
-        setIsCategoriesOpen(false);
-      }
-    };
-    document.addEventListener("mousedown", handleClickOutside);
-    document.addEventListener("touchstart", handleClickOutside);
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
-      document.removeEventListener("touchstart", handleClickOutside);
-    };
-  }, []);
 
   return (
     <nav className="bg-white shadow-sm sticky top-0 z-50 w-full">
       <div className="max-w-7xl mx-auto px-4 sm:px-6">
         <div className="flex items-center justify-between h-16">
+          {/* Left side - logo and menu button */}
           <div className="flex items-center">
             <button 
               className="lg:hidden p-2 rounded-md text-gray-500 hover:text-gray-900 focus:outline-none"
@@ -120,17 +110,15 @@ export default function Nav() {
             </div>
           </div>
 
+          {/* Center - navigation links */}
           <div className="hidden lg:flex items-center space-x-8">
             <Link href="/" className="font-medium text-gray-800 hover:text-orange-500 transition-colors">Home</Link>
-            <div 
-              className="relative"
-              ref={dropdownRef}
-            >
+            <div className="relative" ref={dropdownRef}>
               <button 
                 className="flex items-center font-medium text-gray-800 hover:text-orange-500 transition-colors"
                 onMouseEnter={() => handleCategoryHover(true)}
                 onMouseLeave={() => handleCategoryHover(false)}
-                onClick={toggleCategories}
+                onClick={() => setIsCategoriesOpen(!isCategoriesOpen)}
                 aria-expanded={isCategoriesOpen}
               >
                 Categories
@@ -147,10 +135,9 @@ export default function Nav() {
                     {categories.map((category) => (
                       <button
                         key={category}
-                        onClick={(e) => {
-                          e.preventDefault();
-                          e.stopPropagation();
-                          handleCategoryClick(category);
+                        onClick={() => {
+                          setIsCategoriesOpen(false);
+                          router.push(`/shop?category=${encodeURIComponent(category)}`);
                         }}
                         className="block p-3 rounded-md font-medium text-gray-700 hover:bg-orange-50 hover:text-orange-500 transition-colors text-left"
                       >
@@ -165,30 +152,61 @@ export default function Nav() {
             <Link href="/shop" className="font-medium text-gray-800 hover:text-orange-500 transition-colors">Shop</Link>
             <Link href="/about" className="font-medium text-gray-800 hover:text-orange-500 transition-colors">About</Link>
             <a href="https://sellerhub.agiigo.com/login" className="font-medium text-gray-800 hover:text-orange-500 transition-colors">Sell with us</a>
-           </div>
+          </div>
 
+          {/* Right side - user and cart */}
           <div className="flex items-center space-x-4 sm:space-x-6">
             {isLoggedIn ? (
-              <div className="flex items-center space-x-4">
-                <div className="hidden sm:flex items-center space-x-2">
-                  <User className="h-5 w-5 text-[#EB8426]" />
-                  <span className="text-[#EB8426] font-semibold text-sm sm:text-base">
-                    {user?.name || "Account"}
-                  </span>
-                </div>
+              <div className="relative" ref={profileDropdownRef}>
                 <button 
-                  onClick={handleLogout}
-                  className="flex items-center space-x-1 text-gray-600 hover:text-orange-500 transition-colors"
+                  onClick={toggleProfileDropdown}
+                  className="flex items-center space-x-1 focus:outline-none"
+                  aria-label="User profile"
+                  aria-expanded={isProfileDropdownOpen}
                 >
-                  <LogOut className="h-5 w-5" />
-                  <span className="hidden sm:inline text-sm sm:text-base">Logout</span>
+                  {user?.pfp ? (
+                    <img 
+                      src={user.pfp} 
+                      alt="Profile" 
+                      className="h-10 w-10 rounded-full object-cover border-2 border-orange-100"
+                    />
+                  ) : (
+                    <div className="h-8 w-8 rounded-full bg-orange-100 flex items-center justify-center">
+                      <User className="h-4 w-4 text-orange-500" />
+                    </div>
+                  )}
                 </button>
+
+                {isProfileDropdownOpen && (
+                  <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 z-50">
+                    <Link
+                      href="/profile"
+                      onClick={() => setIsProfileDropdownOpen(false)}
+                      className="block px-4 py-2 text-sm text-gray-700 hover:bg-orange-50 hover:text-orange-600 flex items-center"
+                    >
+                      <User className="h-4 w-4 mr-2" />
+                      View Profile
+                    </Link>
+                    <button
+                      onClick={handleLogout}
+                      className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-orange-50 hover:text-orange-600 flex items-center"
+                    >
+                      <LogOut className="h-4 w-4 mr-2" />
+                      Logout
+                    </button>
+                  </div>
+                )}
               </div>
             ) : (
-              <div className="hidden sm:flex items-center space-x-2">
-                <User className="h-5 w-5 text-[#EB8426]" />
-                <Link href="/login" className="text-[#EB8426] font-semibold text-sm sm:text-base">Login / Register</Link>
-              </div>
+              <Link 
+                href="/login" 
+                className="hidden sm:flex items-center space-x-1 text-[#EB8426] font-semibold text-sm sm:text-base"
+              >
+                <div className="h-8 w-8 rounded-full bg-orange-100 flex items-center justify-center">
+                  <User className="h-4 w-4 text-orange-500" />
+                </div>
+                <span>Login</span>
+              </Link>
             )}
             
             <div className="relative">
@@ -205,26 +223,53 @@ export default function Nav() {
         </div>
       </div>
 
+      {/* Mobile menu */}
       {isMenuOpen && (
         <div className="lg:hidden bg-white border-t">
           <div className="px-4 py-3 space-y-3">
             <div className="flex items-center space-x-2 py-2 sm:hidden">
-              <User className="h-5 w-5 text-[#EB8426]" />
               {isLoggedIn ? (
                 <>
-                  <span className="text-[#EB8426] font-semibold">
-                    {user?.name || "Account"}
-                  </span>
-                  <button 
-                    onClick={handleLogout}
-                    className="ml-4 flex items-center space-x-1 text-gray-600 hover:text-orange-500 transition-colors"
-                  >
-                    <LogOut className="h-5 w-5" />
-                    <span>Logout</span>
-                  </button>
+                  {user?.pfp ? (
+                    <img 
+                      src={user.pfp} 
+                      alt="Profile" 
+                      className="h-8 w-8 rounded-full object-cover border-2 border-orange-100"
+                    />
+                  ) : (
+                    <div className="h-8 w-8 rounded-full bg-orange-100 flex items-center justify-center">
+                      <User className="h-4 w-4 text-orange-500" />
+                    </div>
+                  )}
+                  <div className="flex flex-col ml-2">
+                    <Link 
+                      href="/profile" 
+                      className="text-[#EB8426] font-semibold hover:underline"
+                      onClick={() => setIsMenuOpen(false)}
+                    >
+                      {user?.name || "Account"}
+                    </Link>
+                    <button 
+                      onClick={handleLogout}
+                      className="text-left text-sm text-gray-600 hover:text-orange-500 transition-colors"
+                    >
+                      Logout
+                    </button>
+                  </div>
                 </>
               ) : (
-                <Link href="/login" className="text-[#EB8426] font-semibold">Login / Register</Link>
+                <Link 
+                  href="/login" 
+                  className="flex items-center space-x-2"
+                  onClick={() => setIsMenuOpen(false)}
+                >
+                  <div className="h-8 w-8 rounded-full bg-orange-100 flex items-center justify-center">
+                    <User className="h-4 w-4 text-orange-500" />
+                  </div>
+                  <span className="text-[#EB8426] font-semibold">
+                    Login / Register
+                  </span>
+                </Link>
               )}
             </div>
             
