@@ -106,7 +106,7 @@ export default function ProfilePage() {
         formDataToSend.append('pfp', imageFile);
       }
 
-      const res = await fetch(`http://localhost:4000/api/userprofile/${userData._id}`, {
+      const res = await fetch(`https://api.agiigo.com/api/userprofile/${userData._id}`, {
         method: 'PATCH',
         headers: {
           'Authorization': `Bearer ${token}`
