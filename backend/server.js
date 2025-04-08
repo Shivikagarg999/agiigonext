@@ -16,7 +16,8 @@ const ImageKit = require("imagekit");
 const Cart = require("./models/Cart")
 const subscriberRoutes = require("./routes/subscribers")
 const userRoutes = require("./routes/userRoutes")
-
+const paymentRoutes=require("./routes/payment")
+const orderRoutes= require("./routes/order")
 
 // Middleware
 app.use(express.json());
@@ -55,6 +56,9 @@ mongoose
 // Routes
 app.use('/api/subscribers', subscriberRoutes);
 app.use('/api/userprofile', userRoutes);
+app.use('/api/order', orderRoutes);
+app.use('/api/payment',paymentRoutes )
+
 
   // app.post("/api/login", async (req, res) => {
   //   const { email, password } = req.body;

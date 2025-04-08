@@ -11,6 +11,7 @@
   "dependencies": {
     "@heroicons/react": "^2.2.0",
     "@shadcn/ui": "^0.0.4",
+    "@stripe/stripe-js": "^7.0.0",
     "axios": "^1.8.3",
     "dompurify": "^3.2.4",
     "framer-motion": "^12.4.7",

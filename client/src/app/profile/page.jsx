@@ -47,7 +47,7 @@ export default function ProfilePage() {
         state: parsedUser.state || '',
         city: parsedUser.city || '',
         country: parsedUser.country || '',
-        pincode: parsedUser.pincode || ''
+        pincode: parsedUser.pincode?.toString() || '' // Ensure pincode is string for input
       });
       setIsLoading(false);
     } catch (error) {
@@ -98,7 +98,9 @@ export default function ProfilePage() {
       
       // Append all form fields
       Object.keys(formData).forEach(key => {
-        formDataToSend.append(key, formData[key]);
+        // Convert pincode to number if needed
+        const value = key === 'pincode' ? parseInt(formData[key]) || 0 : formData[key];
+        formDataToSend.append(key, value);
       });
       
       // Append image file if changed
@@ -120,15 +122,27 @@ export default function ProfilePage() {
         throw new Error(responseData.message || 'Failed to update profile');
       }
 
+      // Update all states with fresh data
       setUser(responseData);
       setImagePreview(responseData.pfp || null);
+      setFormData({
+        name: responseData.name || '',
+        email: responseData.email || '',
+        contact: responseData.contact || '',
+        address: responseData.address || '',
+        state: responseData.state || '',
+        city: responseData.city || '',
+        country: responseData.country || '',
+        pincode: responseData.pincode?.toString() || '' // Convert to string for input
+      });
+      
       localStorage.setItem('user', JSON.stringify(responseData));
       setSuccess('Profile updated successfully!');
       setIsEditing(false);
       setImageFile(null);
     } catch (error) {
       console.error('Update error:', error);
-      setError(error.message);
+      setError(error.message || 'An error occurred while updating profile');
     } finally {
       setIsUpdating(false);
     }
@@ -254,6 +268,17 @@ export default function ProfilePage() {
                         setIsEditing(false);
                         setImageFile(null);
                         setImagePreview(user.pfp || null);
+                        // Reset form data to current user data
+                        setFormData({
+                          name: user.name || '',
+                          email: user.email || '',
+                          contact: user.contact || '',
+                          address: user.address || '',
+                          state: user.state || '',
+                          city: user.city || '',
+                          country: user.country || '',
+                          pincode: user.pincode?.toString() || ''
+                        });
                       }}
                       className="flex items-center space-x-1 text-gray-500 hover:text-gray-600"
                     >

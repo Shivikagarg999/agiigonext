@@ -12,7 +12,7 @@ export default function Footer() {
         {/* Brand Section */}
         <div className="space-y-5">
           <div className="flex items-center">
-            <img src="/images/logo.jpg" alt="Agiigo Logo" className="h-8" />
+            <img src="/images/logo-bgr.png" alt="Agiigo Logo" className="h-10" />
           </div>
           
           <p className="text-gray-600 text-sm leading-relaxed">

@@ -21,7 +21,7 @@ export default function CheckoutPage() {
     country: '',
     state: '',
     zipCode: '',
-    paymentMethod: 'credit-card',
+    paymentMethod: 'Cash on Delivery',
     saveInfo: false
   });
   const router = useRouter();
@@ -154,7 +154,7 @@ export default function CheckoutPage() {
         paymentMethod: formData.paymentMethod
       };
 
-      const res = await fetch("https://api.agiigo.com/api/orders", {
+      const res = await fetch("http://localhost:4000/api/order/create-from-cart", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
