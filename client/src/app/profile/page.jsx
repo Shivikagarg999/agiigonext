@@ -34,7 +34,7 @@ export default function ProfilePage() {
       router.push('/login');
       return;
     }
-
+  
     try {
       const parsedUser = JSON.parse(userData);
       setUser(parsedUser);
@@ -47,8 +47,28 @@ export default function ProfilePage() {
         state: parsedUser.state || '',
         city: parsedUser.city || '',
         country: parsedUser.country || '',
-        pincode: parsedUser.pincode?.toString() || '' // Ensure pincode is string for input
+        pincode: parsedUser.pincode?.toString() || ''
       });
+  
+      // Fetch user's orders
+      const fetchOrders = async () => {
+        try {
+          const response = await fetch(`http://localhost:4000/api/order/user/${parsedUser._id}`, {
+            headers: {
+              'Authorization': `Bearer ${token}`
+            }
+          });
+          
+          if (response.ok) {
+            const ordersData = await response.json();
+            setOrders(ordersData);
+          }
+        } catch (error) {
+          console.error('Error fetching orders:', error);
+        }
+      };
+  
+      fetchOrders();
       setIsLoading(false);
     } catch (error) {
       console.error('Error parsing user data:', error);
@@ -460,22 +480,87 @@ export default function ProfilePage() {
 
             {/* Orders Tab */}
             {activeTab === 'orders' && (
-              <div className="bg-white rounded-lg shadow-sm overflow-hidden">
-                <div className="p-6 border-b border-gray-200">
-                  <h2 className="text-lg font-semibold">My Orders</h2>
-                </div>
-                <div className="p-6 text-center text-gray-500">
-                  <ShoppingBag className="mx-auto h-12 w-12 text-gray-400 mb-4" />
-                  <p>No orders found</p>
-                  <button
-                    onClick={() => router.push('/shop')}
-                    className="mt-4 px-4 py-2 bg-orange-500 text-white rounded-md hover:bg-orange-600"
-                  >
-                    Start Shopping
-                  </button>
-                </div>
+  <div className="bg-white rounded-lg shadow-sm overflow-hidden">
+    <div className="p-6 border-b border-gray-200">
+      <h2 className="text-lg font-semibold">My Orders</h2>
+    </div>
+    
+    {orders.length === 0 ? (
+      <div className="p-6 text-center text-gray-500">
+        <ShoppingBag className="mx-auto h-12 w-12 text-gray-400 mb-4" />
+        <p>No orders found</p>
+        <button
+          onClick={() => router.push('/shop')}
+          className="mt-4 px-4 py-2 bg-orange-500 text-white rounded-md hover:bg-orange-600"
+        >
+          Start Shopping
+        </button>
+      </div>
+    ) : (
+      <div className="divide-y divide-gray-200">
+        {orders.map((order) => (
+          <div key={order._id} className="p-6 hover:bg-gray-50 transition-colors">
+            <div className="flex justify-between items-start">
+              <div>
+                <h3 className="font-medium text-gray-900">
+                  Order #{order._id.substring(0, 8).toUpperCase()}
+                </h3>
+                <p className="text-sm text-gray-500 mt-1">
+                  Placed on {new Date(order.createdAt).toLocaleDateString()}
+                </p>
+                <p className="text-sm text-gray-500">
+                  Status: <span className={`font-medium ${
+                    order.orderStatus === 'Delivered' ? 'text-green-600' :
+                    order.orderStatus === 'Cancelled' ? 'text-red-600' :
+                    'text-orange-600'
+                  }`}>
+                    {order.orderStatus}
+                  </span>
+                </p>
               </div>
-            )}
+              <div className="text-right">
+                <p className="font-medium">{order.totalAmount} {order.currency}</p>
+                <button
+                  onClick={() => router.push(`/orders/${order._id}`)}
+                  className="mt-2 text-sm text-orange-600 hover:text-orange-700"
+                >
+                  View Details
+                </button>
+              </div>
+            </div>
+            
+            <div className="mt-4 flex space-x-4 overflow-x-auto pb-2">
+              {order.items.slice(0, 4).map((item) => (
+                <div key={item._id} className="flex-shrink-0">
+                  <div className="h-16 w-16 rounded-md bg-gray-100 overflow-hidden">
+                    {item.product?.image ? (
+                      <img
+                        src={item.product.image}
+                        alt={item.product.name}
+                        className="h-full w-full object-cover"
+                      />
+                    ) : (
+                      <div className="h-full w-full flex items-center justify-center text-gray-400">
+                        <ShoppingBag className="h-6 w-6" />
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ))}
+              {order.items.length > 4 && (
+                <div className="flex-shrink-0 flex items-center justify-center">
+                  <span className="text-sm text-gray-500">
+                    +{order.items.length - 4} more
+                  </span>
+                </div>
+              )}
+            </div>
+          </div>
+        ))}
+      </div>
+    )}
+  </div>
+)}
 
             {/* Security Tab */}
             {activeTab === 'security' && (
