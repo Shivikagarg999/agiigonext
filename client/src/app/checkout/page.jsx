@@ -154,7 +154,7 @@ export default function CheckoutPage() {
         paymentMethod: formData.paymentMethod
       };
 
-      const res = await fetch("http://localhost:4000/api/order/create-from-cart", {
+      const res = await fetch("https://api.agiigo.com/api/order/create-from-cart", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
