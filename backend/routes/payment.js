@@ -1,38 +1,95 @@
-
 const express = require('express');
 const Stripe = require('stripe');
 const router = express.Router();
+const Order = require('../models/Order');
+const Cart = require('../models/Cart');
 
-const stripe = Stripe('sk_test_your_secret_key'); 
+// Initialize Stripe
+const stripe = Stripe('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');
 
-router.post('/create-checkout-session', async (req, res) => {
+// Create payment intent
+router.post('/create-intent', async (req, res) => {
   try {
-    const { cartItems } = req.body;
+    const { amount, currency, userId, metadata } = req.body;
+    // Basic validation
+    if (!amount || !currency || !userId) {
+      return res.status(400).json({ error: 'Amount, currency and userId are required' });
+    }
 
-    const line_items = cartItems.map(item => ({
-      price_data: {
-        currency: 'usd',
-        product_data: {
-          name: item.name,
-          images: [item.image],
-        },
-        unit_amount: item.price * 100, 
-      },
-      quantity: item.quantity,
-    }));
+    // Verify cart amount
+    const cart = await Cart.findOne({ userId });
+    if (!cart) {
+      return res.status(404).json({ error: 'Cart not found' });
+    }
 
-    const session = await stripe.checkout.sessions.create({
-      payment_method_types: ['card'],
-      line_items,
-      mode: 'payment',
-      success_url: 'http://localhost:5173/success',
-      cancel_url: 'http://localhost:5173/cancel',
+    const calculatedAmount = Math.round(cart.totalPrice * 100);
+    if (calculatedAmount !== amount) {
+      return res.status(400).json({ error: 'Amount does not match cart total' });
+    }
+
+    // Create payment intent
+    const paymentIntent = await stripe.paymentIntents.create({
+      amount,
+      currency: currency.toLowerCase(),
+      metadata: {
+        userId,
+        orderId: metadata?.orderId || 'pending',
+        cartId: cart._id.toString()
+      }
     });
 
-    res.json({ id: session.id });
+    res.json({
+      clientSecret: paymentIntent.client_secret,
+      paymentIntentId: paymentIntent.id
+    });
+
   } catch (error) {
-    console.error(error.message);
-    res.status(500).json({ error: 'Something went wrong' });
+    console.error('Payment error:', error);
+    res.status(500).json({ error: 'Payment processing failed' });
+  }
+});
+
+// Confirm payment
+router.post('/confirm', async (req, res) => {
+  try {
+    const { paymentIntentId, orderId, userId } = req.body;
+
+    if (!paymentIntentId || !orderId || !userId) {
+      return res.status(400).json({ error: 'Missing required fields' });
+    }
+
+    // Verify payment
+    const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId);
+    
+    if (paymentIntent.metadata.userId !== userId.toString()) {
+      return res.status(403).json({ error: 'Invalid payment' });
+    }
+
+    if (paymentIntent.status !== 'succeeded') {
+      return res.status(400).json({ error: 'Payment not completed' });
+    }
+
+    // Update order
+    const updatedOrder = await Order.findByIdAndUpdate(
+      orderId,
+      {
+        paymentStatus: 'Paid',
+        paymentId: paymentIntent.id,
+        paymentDate: new Date(),
+        orderStatus: 'Processing'
+      },
+      { new: true }
+    );
+
+    if (!updatedOrder) {
+      return res.status(404).json({ error: 'Order not found' });
+    }
+
+    res.json({ order: updatedOrder });
+
+  } catch (error) {
+    console.error('Confirmation error:', error);
+    res.status(500).json({ error: 'Payment confirmation failed' });
   }
 });
 

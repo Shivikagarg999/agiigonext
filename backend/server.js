@@ -51,7 +51,6 @@ mongoose
     }
   };  
 
-
     
 // Routes
 app.use('/api/subscribers', subscriberRoutes);
@@ -60,7 +59,7 @@ app.use('/api/order', orderRoutes);
 app.use('/api/payment',paymentRoutes )
 
 
-  // app.post("/api/login", async (req, res) => {
+// app.post("/api/login", async (req, res) => {
   //   const { email, password } = req.body;
   
   //   if (!email || !password) {
@@ -101,12 +100,12 @@ app.use('/api/payment',paymentRoutes )
   //       res.status(500).json({ message: "Server error", error: error.message });
   //   }
   // });
-  app.post("/api/logout", (req, res) => {
+app.post("/api/logout", (req, res) => {
     res.clearCookie("token", { path: "/" }); // Clear JWT token
     res.clearCookie("user", { path: "/" });  // Clear user info if stored in cookies
   
     res.status(200).json({ message: "Logged out successfully" });
-  });    
+});    
 // ✅ Register Route
 app.post("/api/register", async (req, res) => {
   const { name, email, password, contact, role } = req.body;

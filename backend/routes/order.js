@@ -18,7 +18,7 @@ router.get('/user/:userId', async (req, res) => {
     const orders = await Order.find({ user: userId })
       .populate({
         path: 'items.product',
-        select: 'name images price' 
+        select: 'name image price' 
       })
       .sort({ createdAt: -1 });
 
@@ -39,63 +39,102 @@ router.get('/user/:userId', async (req, res) => {
 // POST /api/order/create-from-cart
 router.post('/create-from-cart', async (req, res) => {
   try {
-    const { userId, shippingAddress, paymentMethod, currency = 'USD' } = req.body;
+    console.log('Incoming order request:', req.body);
+    
+    const { 
+      userId,
+      shippingAddress,
+      contactInfo,
+      paymentMethod,
+      currency = 'USD',
+      paymentStatus = 'Pending'
+    } = req.body;
 
-    if (!userId || !shippingAddress || !paymentMethod) {
-      return res.status(400).json({ message: 'userId, shippingAddress, and paymentMethod are required.' });
+    // Validate required fields
+    if (!mongoose.Types.ObjectId.isValid(userId)) {
+      return res.status(400).json({ message: 'Invalid user ID' });
     }
 
-    // Fetch cart
-    const cart = await Cart.findOne({ userId });
+    if (!shippingAddress || !shippingAddress.street || !shippingAddress.city || 
+        !shippingAddress.country || !shippingAddress.zipCode) {
+      return res.status(400).json({ message: 'Complete shipping address is required' });
+    }
+
+    if (!paymentMethod) {
+      return res.status(400).json({ message: 'Payment method is required' });
+    }
+
+    if (!contactInfo || !contactInfo.email) {
+      return res.status(400).json({ message: 'Contact information is required' });
+    }
+
+    // Fetch user cart
+    const cart = await Cart.findOne({ userId }).populate('items.productId');
     if (!cart || cart.items.length === 0) {
-      return res.status(400).json({ message: 'Cart is empty.' });
+      return res.status(400).json({ message: 'Cart is empty' });
     }
 
     // Prepare order items
     const orderItems = cart.items.map(item => ({
-      product: item.productId,
+      product: item.productId._id,
       quantity: item.quantity,
-      priceAtPurchase: item.priceAtTimeOfAddition,
+      priceAtPurchase: item.productId.price,
+      name: item.productId.name
     }));
 
-    // Calculate totalAmount
-    const totalAmount = orderItems.reduce((sum, item) => {
-      return sum + item.priceAtPurchase * item.quantity;
+    // Calculate total amount
+    const totalAmount = orderItems.reduce((total, item) => {
+      return total + (item.priceAtPurchase * item.quantity);
     }, 0);
 
-    // Create order
+    // Format shipping address as string
+    const formattedShippingAddress = `
+      ${shippingAddress.street}, 
+      ${shippingAddress.city}, 
+      ${shippingAddress.state || ''} 
+      ${shippingAddress.zipCode}, 
+      ${shippingAddress.country}
+    `.replace(/\n/g, '').replace(/\s+/g, ' ').trim();
+
+    // Create new order
     const newOrder = new Order({
       user: userId,
       items: orderItems,
-      shippingAddress,
+      shippingAddress: formattedShippingAddress,
+      contactInfo,
       paymentMethod,
+      paymentStatus,
       currency,
       totalAmount,
-      paymentStatus: 'Pending',
-      orderStatus: 'Processing',
+      orderStatus: 'Processing'
     });
 
+    // Save order
     const savedOrder = await newOrder.save();
 
-    // Push to user document
+    // Update user's orders
     await User.findByIdAndUpdate(userId, {
       $push: { orders: savedOrder._id }
     });
 
-    // Clear cart
-    cart.items = [];
-    cart.totalPrice = 0;
-    await cart.save();
+    // Clear the cart
+    await Cart.findByIdAndUpdate(cart._id, {
+      $set: { items: [], totalPrice: 0 }
+    });
 
     res.status(201).json({
-      message: 'Order placed successfully.',
+      message: 'Order created successfully',
       order: savedOrder
     });
 
   } catch (error) {
-    console.error('Error placing order:', error);
+    console.error('Order creation error:', {
+      message: error.message,
+      stack: error.stack,
+      requestBody: req.body
+    });
     res.status(500).json({
-      message: 'Internal server error',
+      message: 'Failed to create order',
       error: error.message
     });
   }

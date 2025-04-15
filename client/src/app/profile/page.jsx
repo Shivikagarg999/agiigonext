@@ -1,13 +1,14 @@
 "use client";
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { User, ShoppingBag, Shield, LogOut, ArrowLeft, Save, Edit, X } from 'lucide-react';
+import { User, ShoppingBag, Shield, LogOut, ArrowLeft, Save, Edit, X, Camera } from 'lucide-react';
 
 export default function ProfilePage() {
   const [user, setUser] = useState(null);
   const [orders, setOrders] = useState([]);
   const [activeTab, setActiveTab] = useState('profile');
   const [isLoading, setIsLoading] = useState(true);
+  const [ordersLoading, setOrdersLoading] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [formData, setFormData] = useState({
     name: '',
@@ -53,6 +54,7 @@ export default function ProfilePage() {
       // Fetch user's orders
       const fetchOrders = async () => {
         try {
+          setOrdersLoading(true);
           const response = await fetch(`http://localhost:4000/api/order/user/${parsedUser._id}`, {
             headers: {
               'Authorization': `Bearer ${token}`
@@ -65,6 +67,8 @@ export default function ProfilePage() {
           }
         } catch (error) {
           console.error('Error fetching orders:', error);
+        } finally {
+          setOrdersLoading(false);
         }
       };
   
@@ -93,6 +97,11 @@ export default function ProfilePage() {
   const handleImageChange = (e) => {
     const file = e.target.files[0];
     if (file) {
+      // Check file size (max 2MB)
+      if (file.size > 2 * 1024 * 1024) {
+        setError('Image size should be less than 2MB');
+        return;
+      }
       setImageFile(file);
       const reader = new FileReader();
       reader.onload = () => setImagePreview(reader.result);
@@ -100,10 +109,41 @@ export default function ProfilePage() {
     }
   };
 
+  const validateForm = () => {
+    const errors = {};
+    
+    if (!formData.name.trim()) {
+      errors.name = 'Name is required';
+    }
+    
+    if (!formData.email.trim()) {
+      errors.email = 'Email is required';
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
+      errors.email = 'Invalid email address';
+    }
+    
+    if (formData.contact && !/^[\+]?[(]?[0-9]{3}[)]?[-\s\.]?[0-9]{3}[-\s\.]?[0-9]{4,6}$/.test(formData.contact)) {
+      errors.contact = 'Invalid phone number';
+    }
+    
+    if (formData.pincode && !/^\d+$/.test(formData.pincode)) {
+      errors.pincode = 'ZIP code must be numeric';
+    }
+    
+    return errors;
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError(null);
     setSuccess(null);
+    
+    const errors = validateForm();
+    if (Object.keys(errors).length > 0) {
+      setError('Please correct the errors in the form');
+      return;
+    }
+    
     setIsUpdating(true);
 
     try {
@@ -153,7 +193,7 @@ export default function ProfilePage() {
         state: responseData.state || '',
         city: responseData.city || '',
         country: responseData.country || '',
-        pincode: responseData.pincode?.toString() || '' // Convert to string for input
+        pincode: responseData.pincode?.toString() || ''
       });
       
       localStorage.setItem('user', JSON.stringify(responseData));
@@ -323,13 +363,20 @@ export default function ProfilePage() {
                 <form onSubmit={handleSubmit} className="p-6">
                   {/* Profile Picture Upload */}
                   <div className="flex flex-col items-center mb-8">
-                    <div className="relative mb-4">
+                    <div className="relative mb-4 group">
                       {imagePreview ? (
-                        <img 
-                          src={imagePreview} 
-                          alt="Profile" 
-                          className="w-32 h-32 rounded-full object-cover border-4 border-white shadow-md"
-                        />
+                        <>
+                          <img 
+                            src={imagePreview} 
+                            alt="Profile" 
+                            className="w-32 h-32 rounded-full object-cover border-4 border-white shadow-md"
+                          />
+                          {isEditing && (
+                            <div className="absolute inset-0 rounded-full bg-black bg-opacity-30 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                              <Camera className="h-8 w-8 text-white" />
+                            </div>
+                          )}
+                        </>
                       ) : (
                         <div className="w-32 h-32 rounded-full bg-gray-300 flex items-center justify-center border-4 border-white shadow-md">
                           <User className="h-16 w-16 text-gray-500" />
@@ -342,17 +389,34 @@ export default function ProfilePage() {
                         <label className="block text-sm font-medium text-gray-700 mb-1 text-center">
                           Change Profile Photo
                         </label>
-                        <input
-                          type="file"
-                          accept="image/*"
-                          onChange={handleImageChange}
-                          className="block w-full text-sm text-gray-500
-                            file:mr-4 file:py-2 file:px-4
-                            file:rounded-md file:border-0
-                            file:text-sm file:font-semibold
-                            file:bg-orange-50 file:text-orange-700
-                            hover:file:bg-orange-100"
-                        />
+                        <div className="flex items-center justify-center gap-2">
+                          <label className="cursor-pointer">
+                            <span className="px-4 py-2 bg-orange-500 text-white rounded-md hover:bg-orange-600 text-sm">
+                              Upload Photo
+                            </span>
+                            <input
+                              type="file"
+                              accept="image/*"
+                              onChange={handleImageChange}
+                              className="hidden"
+                            />
+                          </label>
+                          {imagePreview && (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setImageFile(null);
+                                setImagePreview(user.pfp || null);
+                              }}
+                              className="px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 text-sm"
+                            >
+                              Remove
+                            </button>
+                          )}
+                        </div>
+                        <p className="mt-1 text-xs text-gray-500 text-center">
+                          JPG, GIF or PNG. Max size 2MB
+                        </p>
                       </div>
                     )}
                   </div>
@@ -391,6 +455,7 @@ export default function ProfilePage() {
                         onChange={handleInputChange}
                         className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
                         disabled={!isEditing}
+                        placeholder="+1 (555) 123-4567"
                       />
                     </div>
                     <div>
@@ -480,87 +545,143 @@ export default function ProfilePage() {
 
             {/* Orders Tab */}
             {activeTab === 'orders' && (
-  <div className="bg-white rounded-lg shadow-sm overflow-hidden">
-    <div className="p-6 border-b border-gray-200">
-      <h2 className="text-lg font-semibold">My Orders</h2>
-    </div>
-    
-    {orders.length === 0 ? (
-      <div className="p-6 text-center text-gray-500">
-        <ShoppingBag className="mx-auto h-12 w-12 text-gray-400 mb-4" />
-        <p>No orders found</p>
-        <button
-          onClick={() => router.push('/shop')}
-          className="mt-4 px-4 py-2 bg-orange-500 text-white rounded-md hover:bg-orange-600"
-        >
-          Start Shopping
-        </button>
-      </div>
-    ) : (
-      <div className="divide-y divide-gray-200">
-        {orders.map((order) => (
-          <div key={order._id} className="p-6 hover:bg-gray-50 transition-colors">
-            <div className="flex justify-between items-start">
-              <div>
-                <h3 className="font-medium text-gray-900">
-                  Order #{order._id.substring(0, 8).toUpperCase()}
-                </h3>
-                <p className="text-sm text-gray-500 mt-1">
-                  Placed on {new Date(order.createdAt).toLocaleDateString()}
-                </p>
-                <p className="text-sm text-gray-500">
-                  Status: <span className={`font-medium ${
-                    order.orderStatus === 'Delivered' ? 'text-green-600' :
-                    order.orderStatus === 'Cancelled' ? 'text-red-600' :
-                    'text-orange-600'
-                  }`}>
-                    {order.orderStatus}
-                  </span>
-                </p>
-              </div>
-              <div className="text-right">
-                <p className="font-medium">{order.totalAmount} {order.currency}</p>
-                <button
-                  onClick={() => router.push(`/orders/${order._id}`)}
-                  className="mt-2 text-sm text-orange-600 hover:text-orange-700"
-                >
-                  View Details
-                </button>
-              </div>
-            </div>
-            
-            <div className="mt-4 flex space-x-4 overflow-x-auto pb-2">
-              {order.items.slice(0, 4).map((item) => (
-                <div key={item._id} className="flex-shrink-0">
-                  <div className="h-16 w-16 rounded-md bg-gray-100 overflow-hidden">
-                    {item.product?.image ? (
-                      <img
-                        src={item.product.image}
-                        alt={item.product.name}
-                        className="h-full w-full object-cover"
-                      />
-                    ) : (
-                      <div className="h-full w-full flex items-center justify-center text-gray-400">
-                        <ShoppingBag className="h-6 w-6" />
-                      </div>
-                    )}
+              <div className="bg-white rounded-lg shadow-sm overflow-hidden">
+                <div className="p-6 border-b border-gray-200">
+                  <h2 className="text-lg font-semibold">Order History</h2>
+                  <p className="text-sm text-gray-500 mt-1">
+                    {orders.length} {orders.length === 1 ? 'order' : 'orders'} placed
+                  </p>
+                </div>
+                
+                {ordersLoading ? (
+                  <div className="p-6 flex justify-center">
+                    <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-orange-500"></div>
                   </div>
-                </div>
-              ))}
-              {order.items.length > 4 && (
-                <div className="flex-shrink-0 flex items-center justify-center">
-                  <span className="text-sm text-gray-500">
-                    +{order.items.length - 4} more
-                  </span>
-                </div>
-              )}
-            </div>
-          </div>
-        ))}
-      </div>
-    )}
-  </div>
-)}
+                ) : orders.length === 0 ? (
+                  <div className="p-6 text-center text-gray-500">
+                    <ShoppingBag className="mx-auto h-12 w-12 text-gray-400 mb-4" />
+                    <p>You haven't placed any orders yet</p>
+                    <button
+                      onClick={() => router.push('/shop')}
+                      className="mt-4 px-4 py-2 bg-orange-500 text-white rounded-md hover:bg-orange-600"
+                    >
+                      Start Shopping
+                    </button>
+                  </div>
+                ) : (
+                  <div className="divide-y divide-gray-200">
+                    {orders
+                      .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+                      .map((order) => (
+                        <div key={order._id} className="p-6 hover:bg-gray-50 transition-colors">
+                          <div className="flex flex-col sm:flex-row justify-between gap-4">
+                            <div className="flex-1">
+                              <div className="flex items-baseline gap-2">
+                                <h3 className="font-medium text-gray-900">
+                                  Order #{order._id.substring(0, 8).toUpperCase()}
+                                </h3>
+                                <span className="text-xs bg-gray-100 px-2 py-1 rounded">
+                                  {order.paymentMethod}
+                                </span>
+                              </div>
+                              <p className="text-sm text-gray-500 mt-1">
+                                Placed on {new Date(order.createdAt).toLocaleDateString('en-US', {
+                                  year: 'numeric',
+                                  month: 'long',
+                                  day: 'numeric'
+                                })}
+                              </p>
+                              <div className="mt-2 flex items-center">
+                                <span className="text-sm font-medium mr-2">Status:</span>
+                                <span className={`text-sm px-2 py-1 rounded ${
+                                  order.orderStatus === 'Delivered' ? 'bg-green-100 text-green-800' :
+                                  order.orderStatus === 'Cancelled' ? 'bg-red-100 text-red-800' :
+                                  'bg-orange-100 text-orange-800'
+                                }`}>
+                                  {order.orderStatus}
+                                </span>
+                              </div>
+                            </div>
+                            
+                            <div className="sm:text-right">
+                              <p className="font-medium">
+                                {order.currency} {order.totalAmount.toFixed(2)}
+                              </p>
+                              <button
+                                onClick={() => router.push(`/orders/${order._id}`)}
+                                className="mt-2 text-sm text-orange-600 hover:text-orange-700 font-medium"
+                              >
+                                View Details &rarr;
+                              </button>
+                            </div>
+                          </div>
+                          
+                          <div className="mt-4">
+                            <h4 className="text-sm font-medium mb-2">Items ({order.items.length})</h4>
+                            <div className="flex space-x-4 overflow-x-auto pb-2">
+                              {order.items.slice(0, 4).map((item) => (
+                                <div key={item._id} className="flex-shrink-0">
+                                  <div className="h-20 w-20 rounded-md bg-gray-100 overflow-hidden border border-gray-200">
+                                    {item.product?.image ? (
+                                      <img
+                                        src={item.product.image}
+                                        alt={item.product.name}
+                                        className="h-full w-full object-cover"
+                                      />
+                                    ) : (
+                                      <div className="h-full w-full flex items-center justify-center text-gray-400">
+                                        <ShoppingBag className="h-6 w-6" />
+                                      </div>
+                                    )}
+                                  </div>
+                                  <p className="mt-1 text-xs text-gray-600 truncate w-20">
+                                    {item.product?.name || 'Unknown Product'}
+                                  </p>
+                                  <p className="text-xs font-medium">
+                                    Qty: {item.quantity}
+                                  </p>
+                                </div>
+                              ))}
+                              {order.items.length > 4 && (
+                                <div className="flex-shrink-0 flex items-center justify-center">
+                                  <div className="h-20 w-20 rounded-md bg-gray-50 border border-gray-200 flex items-center justify-center">
+                                    <span className="text-sm text-gray-500">
+                                      +{order.items.length - 4} more
+                                    </span>
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+
+                          <div className="mt-4">
+                            <div className="flex items-center">
+                              <div className="flex-1">
+                                <div className="flex text-xs text-gray-500 justify-between mb-1">
+                                  <span>Order Placed</span>
+                                  <span>Processed</span>
+                                  <span>Shipped</span>
+                                  <span>Delivered</span>
+                                </div>
+                                <div className="relative h-2 bg-gray-200 rounded-full overflow-hidden">
+                                  <div 
+                                    className="absolute top-0 left-0 h-full bg-orange-500"
+                                    style={{
+                                      width: order.orderStatus === 'Processing' ? '33%' :
+                                             order.orderStatus === 'Shipped' ? '66%' :
+                                             order.orderStatus === 'Delivered' ? '100%' : '0%'
+                                    }}
+                                  ></div>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                  </div>
+                )}
+              </div>
+            )}
 
             {/* Security Tab */}
             {activeTab === 'security' && (

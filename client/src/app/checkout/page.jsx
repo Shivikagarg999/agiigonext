@@ -5,6 +5,7 @@ import Nav from "@/app/nav/Nav";
 import Footer from "@/app/footer/Footer";
 import { FaChevronRight, FaLock } from "react-icons/fa";
 import Link from "next/link";
+import { loadStripe } from '@stripe/stripe-js';
 
 export default function CheckoutPage() {
   const [cart, setCart] = useState(null);
@@ -122,8 +123,22 @@ export default function CheckoutPage() {
     }));
   };
 
+  const validateForm = () => {
+    if (!formData.firstName || !formData.lastName || !formData.email) {
+      setError('Please complete all contact information');
+      return false;
+    }
+    if (!formData.address || !formData.city || !formData.country || !formData.zipCode) {
+      setError('Please complete all shipping information');
+      return false;
+    }
+    return true;
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (!validateForm()) return;
+    
     const token = localStorage.getItem("token") || 
                  document.cookie.split('; ').find(row => row.startsWith('token='))?.split('=')[1];
     
@@ -133,11 +148,9 @@ export default function CheckoutPage() {
     }
 
     try {
+      // Prepare order data in backend expected format
       const orderData = {
         userId: user._id,
-        cartId: cart._id,
-        items: cart.items,
-        totalAmount: cart.totalPrice,
         shippingAddress: {
           street: formData.address,
           city: formData.city,
@@ -151,25 +164,87 @@ export default function CheckoutPage() {
           email: formData.email,
           phone: formData.phone
         },
-        paymentMethod: formData.paymentMethod
+        paymentMethod: formData.paymentMethod,
+        currency: cart.items[0]?.productId?.priceCurrency || 'USD'
       };
 
-      const res = await fetch("https://api.agiigo.com/api/order/create-from-cart", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`
-        },
-        body: JSON.stringify(orderData),
-      });
+      if (formData.paymentMethod === 'credit-card') {
+        // Stripe payment flow
+        const orderRes = await fetch("http://localhost:4000/api/order/create-from-cart", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`
+          },
+          body: JSON.stringify({
+            ...orderData,
+            paymentStatus: 'Pending'
+          }),
+        });
 
-      if (!res.ok) throw new Error("Failed to place order");
-      
-      const order = await res.json();
-      router.push(`/order-confirmation?orderId=${order._id}`);
+        if (!orderRes.ok) {
+          const errorData = await orderRes.json();
+          throw new Error(errorData.message || "Failed to create order");
+        }
+
+        const order = await orderRes.json();
+        const stripe = await loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY);
+        
+        const paymentResponse = await fetch("https://api.agiigo.com/api/payment/create-intent", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`
+          },
+          body: JSON.stringify({
+            amount: cart.totalPrice * 100, // Convert to cents
+            currency: orderData.currency,
+            metadata: {
+              userId: user._id,
+              orderId: order._id
+            }
+          }),
+        });
+
+        if (!paymentResponse.ok) throw new Error("Failed to create payment intent");
+        
+        const { clientSecret } = await paymentResponse.json();
+
+        const { error } = await stripe.confirmPayment({
+          clientSecret,
+          confirmParams: {
+            return_url: `${window.location.origin}/order-confirmation?orderId=${order._id}`,
+            receipt_email: formData.email,
+          },
+        });
+
+        if (error) throw error;
+        
+      } else {
+        // Non-Stripe payment methods
+        const res = await fetch("https://api.agiigo.com/api/order/create-from-cart", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`
+          },
+          body: JSON.stringify(orderData),
+        });
+
+        if (!res.ok) {
+          const errorData = await res.json();
+          throw new Error(errorData.message || "Failed to place order");
+        }
+        
+        const order = await res.json();
+        router.push(`/order-confirmation?orderId=${order._id}`);
+      }
     } catch (err) {
-      console.error("Error placing order:", err);
-      setError(err.message);
+      console.error("Full error details:", {
+        message: err.message,
+        stack: err.stack
+      });
+      setError(err.message || "Failed to process your order. Please try again.");
     }
   };
 
@@ -206,7 +281,7 @@ export default function CheckoutPage() {
           <h2 className="text-2xl font-bold text-gray-800 mb-2">Your cart is empty</h2>
           <p className="text-gray-600 mb-8">Please add items to your cart before checkout</p>
           <Link 
-            href="/products"
+            href="/shop"
             className="bg-[#EB8426] text-white py-3 px-8 rounded-md hover:bg-orange-700 transition font-medium text-lg inline-block"
           >
             Shop Now
@@ -382,51 +457,37 @@ export default function CheckoutPage() {
               <h2 className="text-xl font-bold text-gray-800 mb-6 pb-2 border-b border-gray-100">Payment Method</h2>
               
               <div className="space-y-4">
-                <div className="flex items-center">
-                  <input
-                    type="radio"
-                    id="credit-card"
-                    name="paymentMethod"
-                    value="credit-card"
-                    checked={formData.paymentMethod === 'credit-card'}
-                    onChange={handleInputChange}
-                    className="h-4 w-4 text-[#EB8426] focus:ring-[#EB8426] border-gray-300"
-                  />
-                  <label htmlFor="credit-card" className="ml-3 block text-sm font-medium text-gray-700">
-                    Credit Card
-                  </label>
-                </div>
-                
-                <div className="flex items-center">
-                  <input
-                    type="radio"
-                    id="paypal"
-                    name="paymentMethod"
-                    value="paypal"
-                    checked={formData.paymentMethod === 'paypal'}
-                    onChange={handleInputChange}
-                    className="h-4 w-4 text-[#EB8426] focus:ring-[#EB8426] border-gray-300"
-                  />
-                  <label htmlFor="paypal" className="ml-3 block text-sm font-medium text-gray-700">
-                    PayPal
-                  </label>
-                </div>
-                
-                <div className="flex items-center">
-                  <input
-                    type="radio"
-                    id="bank-transfer"
-                    name="paymentMethod"
-                    value="bank-transfer"
-                    checked={formData.paymentMethod === 'bank-transfer'}
-                    onChange={handleInputChange}
-                    className="h-4 w-4 text-[#EB8426] focus:ring-[#EB8426] border-gray-300"
-                  />
-                  <label htmlFor="bank-transfer" className="ml-3 block text-sm font-medium text-gray-700">
-                    Bank Transfer
-                  </label>
-                </div>
-              </div>
+  <div className="flex items-center">
+    <input
+      type="radio"
+      id="credit-card"
+      name="paymentMethod"
+      value="credit-card"
+      checked={formData.paymentMethod === 'credit-card'}
+      onChange={handleInputChange}
+      className="h-4 w-4 text-[#EB8426] focus:ring-[#EB8426] border-gray-300"
+    />
+    <label htmlFor="credit-card" className="ml-3 block text-sm font-medium text-gray-700">
+      Credit/Debit Card (Stripe)
+    </label>
+  </div>
+  
+  {/* Keep your other payment methods */}
+  <div className="flex items-center">
+    <input
+      type="radio"
+      id="cash-on-delivery"
+      name="paymentMethod"
+      value="Cash on Delivery"
+      checked={formData.paymentMethod === 'Cash on Delivery'}
+      onChange={handleInputChange}
+      className="h-4 w-4 text-[#EB8426] focus:ring-[#EB8426] border-gray-300"
+    />
+    <label htmlFor="cash-on-delivery" className="ml-3 block text-sm font-medium text-gray-700">
+      Cash on Delivery
+    </label>
+  </div>
+</div>
             </div>
           </div>
 
