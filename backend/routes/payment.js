@@ -3,6 +3,7 @@ const Stripe = require('stripe');
 const router = express.Router();
 const Order = require('../models/Order');
 const Cart = require('../models/Cart');
+const endpointSecret = 'we_1PfI2HBh8DMWVmVhg5HykjnO'; 
 
 // Initialize Stripe
 const stripe = Stripe('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');
@@ -91,6 +92,39 @@ router.post('/confirm', async (req, res) => {
     console.error('Confirmation error:', error);
     res.status(500).json({ error: 'Payment confirmation failed' });
   }
+});
+
+//Stripe webhook secret
+
+router.post('/webhook', express.raw({type: 'application/json'}), async (req, res) => {
+  const sig = req.headers['stripe-signature'];
+  let event;
+
+  try {
+    event = stripe.webhooks.constructEvent(req.body, sig, endpointSecret);
+  } catch (err) {
+    console.error('Webhook error:', err.message);
+    return res.status(400).send(`Webhook Error: ${err.message}`);
+  }
+
+  // Handle successful payment
+  if (event.type === 'payment_intent.succeeded') {
+    const paymentIntent = event.data.object;
+    const orderId = paymentIntent.metadata.orderId;
+
+    try {
+      await Order.findByIdAndUpdate(orderId, {
+        paymentStatus: 'Paid',
+        paymentId: paymentIntent.id,
+        paymentDate: new Date()
+      });
+      console.log(`Updated order ${orderId} to Paid status`);
+    } catch (err) {
+      console.error('Failed to update order:', err);
+    }
+  }
+
+  res.json({received: true});
 });
 
 module.exports = router;

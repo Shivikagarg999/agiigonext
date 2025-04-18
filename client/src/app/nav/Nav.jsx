@@ -11,6 +11,7 @@ export default function Nav() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [user, setUser] = useState(null);
   const [isProfileDropdownOpen, setIsProfileDropdownOpen] = useState(false);
+  const [cartCount, setCartCount] = useState(0);
   const dropdownRef = useRef(null);
   const profileDropdownRef = useRef(null);
   const router = useRouter();
@@ -43,6 +44,43 @@ export default function Nav() {
     };
     fetchCategories();
   }, []);
+
+  useEffect(() => {
+    const fetchCartCount = async () => {
+      if (!isLoggedIn || !user?._id) {
+        setCartCount(0);
+        return;
+      }
+      
+      try {
+        const token = localStorage.getItem("token") || 
+                     document.cookie.split('; ').find(row => row.startsWith('token='))?.split('=')[1];
+        
+        if (!token) return;
+
+        const res = await fetch(`https://api.agiigo.com/api/cart?userId=${user._id}`, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json"
+          }
+        });
+        
+        if (res.ok) {
+          const data = await res.json();
+          if (data?.items && Array.isArray(data.items)) {
+            setCartCount(data.items.length);
+          } else {
+            setCartCount(0);
+          }
+        }
+      } catch (error) {
+        console.error("Error fetching cart count:", error);
+        setCartCount(0);
+      }
+    };
+
+    fetchCartCount();
+  }, [isLoggedIn, user?._id]);
 
   useEffect(() => {
     const handleResize = () => {
@@ -87,9 +125,12 @@ export default function Nav() {
   const handleLogout = () => {
     localStorage.removeItem("token");
     localStorage.removeItem("user");
+    document.cookie = "token=; Path=/; Expires=Thu, 01 Jan 1970 00:00:01 GMT;";
+    document.cookie = "user=; Path=/; Expires=Thu, 01 Jan 1970 00:00:01 GMT;";
     setIsLoggedIn(false);
     setUser(null);
     setIsProfileDropdownOpen(false);
+    setCartCount(0);
     router.push("/");
   };
 
@@ -190,7 +231,7 @@ export default function Nav() {
                     <Link
                       href="/profile"
                       onClick={() => setIsProfileDropdownOpen(false)}
-                      className=" px-4 py-2 text-sm text-gray-700 hover:bg-orange-50 hover:text-orange-600 flex items-center"
+                      className="px-4 py-2 text-sm text-gray-700 hover:bg-orange-50 hover:text-orange-600 flex items-center"
                     >
                       <User className="h-4 w-4 mr-2" />
                       View Profile
@@ -224,7 +265,11 @@ export default function Nav() {
                 aria-label="Shopping Cart"
               >
                 <ShoppingCart className="h-5 w-5 text-gray-600 hover:text-orange-500 cursor-pointer transition-colors" />
-                <span className="absolute -top-2 -right-2 bg-orange-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">0</span>
+                {cartCount > 0 && (
+                  <span className="absolute -top-2 -right-2 bg-orange-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
+                    {cartCount > 9 ? "9+" : cartCount}
+                  </span>
+                )}
               </button>
             </div>
           </div>
