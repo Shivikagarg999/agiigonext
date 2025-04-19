@@ -1,760 +1,635 @@
 "use client";
-import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
-import { User, ShoppingBag, Shield, LogOut, ArrowLeft, Save, Edit, X, Camera } from 'lucide-react';
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import Nav from "@/app/nav/Nav";
+import Footer from "@/app/footer/Footer";
+import { FaChevronRight, FaLock, FaSpinner } from "react-icons/fa";
+import Link from "next/link";
+import { loadStripe } from '@stripe/stripe-js';
 
-export default function ProfilePage() {
+const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY);
+
+export default function CheckoutPage() {
+  const [cart, setCart] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [processingPayment, setProcessingPayment] = useState(false);
+  const [error, setError] = useState(null);
   const [user, setUser] = useState(null);
-  const [orders, setOrders] = useState([]);
-  const [activeTab, setActiveTab] = useState('profile');
-  const [isLoading, setIsLoading] = useState(true);
-  const [ordersLoading, setOrdersLoading] = useState(false);
-  const [isEditing, setIsEditing] = useState(false);
   const [formData, setFormData] = useState({
-    name: '',
+    firstName: '',
+    lastName: '',
     email: '',
-    contact: '',
+    phone: '',
     address: '',
-    state: '',
     city: '',
     country: '',
-    pincode: ''
+    state: '',
+    zipCode: '',
+    paymentMethod: 'Cash on Delivery',
+    saveInfo: false
   });
-  const [imageFile, setImageFile] = useState(null);
-  const [imagePreview, setImagePreview] = useState(null);
-  const [error, setError] = useState(null);
-  const [success, setSuccess] = useState(null);
-  const [isUpdating, setIsUpdating] = useState(false);
   const router = useRouter();
 
   useEffect(() => {
-    const token = localStorage.getItem('token');
-    const userData = localStorage.getItem('user');
-    
-    if (!token || !userData) {
-      router.push('/login');
-      return;
-    }
-  
-    try {
-      const parsedUser = JSON.parse(userData);
-      setUser(parsedUser);
-      setImagePreview(parsedUser.pfp || null);
-      setFormData({
-        name: parsedUser.name || '',
-        email: parsedUser.email || '',
-        contact: parsedUser.contact || '',
-        address: parsedUser.address || '',
-        state: parsedUser.state || '',
-        city: parsedUser.city || '',
-        country: parsedUser.country || '',
-        pincode: parsedUser.pincode?.toString() || ''
-      });
-  
-      // Fetch user's orders
-      const fetchOrders = async () => {
-        try {
-          setOrdersLoading(true);
-          const response = await fetch(`http://localhost:4000/api/order/user/${parsedUser._id}`, {
-            headers: {
-              'Authorization': `Bearer ${token}`
-            }
-          });
-          
-          if (response.ok) {
-            const ordersData = await response.json();
-            setOrders(ordersData);
+    const checkAuth = () => {
+      const token = localStorage.getItem("token");
+      const userData = localStorage.getItem("user");
+
+      if (!token || !userData) {
+        const cookieToken = document.cookie.split('; ').find(row => row.startsWith('token='))?.split('=')[1];
+        const cookieUser = document.cookie.split('; ').find(row => row.startsWith('user='))?.split('=')[1];
+        
+        if (cookieToken && cookieUser) {
+          try {
+            const parsedUser = JSON.parse(decodeURIComponent(cookieUser));
+            setUser(parsedUser);
+            setFormData(prev => ({
+              ...prev,
+              firstName: parsedUser.firstName || '',
+              lastName: parsedUser.lastName || '',
+              email: parsedUser.email || ''
+            }));
+            fetchCartData(parsedUser._id, cookieToken);
+            return;
+          } catch (e) {
+            console.error("Error parsing cookie user data:", e);
           }
-        } catch (error) {
-          console.error('Error fetching orders:', error);
-        } finally {
-          setOrdersLoading(false);
         }
-      };
-  
-      fetchOrders();
-      setIsLoading(false);
-    } catch (error) {
-      console.error('Error parsing user data:', error);
-      router.push('/login');
-    }
+        router.push("/login");
+        return;
+      }
+
+      try {
+        const parsedUser = JSON.parse(userData);
+        setUser(parsedUser);
+        setFormData(prev => ({
+          ...prev,
+          firstName: parsedUser.firstName || '',
+          lastName: parsedUser.lastName || '',
+          email: parsedUser.email || ''
+        }));
+        fetchCartData(parsedUser._id, token);
+      } catch (error) {
+        console.error("Error parsing user data:", error);
+        clearAuthData();
+        router.push("/login");
+      }
+    };
+
+    checkAuth();
   }, [router]);
 
-  const handleLogout = () => {
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
-    router.push('/');
+  const clearAuthData = () => {
+    localStorage.removeItem("token");
+    localStorage.removeItem("user");
+    document.cookie = "token=; Path=/; Expires=Thu, 01 Jan 1970 00:00:01 GMT;";
+    document.cookie = "user=; Path=/; Expires=Thu, 01 Jan 1970 00:00:01 GMT;";
+  };
+
+  const fetchCartData = async (userId, token) => {
+    try {
+      const res = await fetch(`https://api.agiigo.com/api/cart?userId=${userId}`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json"
+        }
+      });
+      
+      if (!res.ok) {
+        const errorData = await res.json();
+        throw new Error(errorData.message || "Failed to fetch cart");
+      }
+      
+      const data = await res.json();
+      if (!data?.items) throw new Error("Invalid cart data structure");
+      
+      setCart(data);
+      setError(null);
+    } catch (err) {
+      console.error("Fetch error:", err);
+      setError(err.message);
+      
+      if (err.message.includes("401") || err.message.includes("403")) {
+        clearAuthData();
+        router.push("/login");
+      }
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleInputChange = (e) => {
-    const { name, value } = e.target;
+    const { name, value, type, checked } = e.target;
     setFormData(prev => ({
       ...prev,
-      [name]: value
+      [name]: type === 'checkbox' ? checked : value
     }));
   };
 
-  const handleImageChange = (e) => {
-    const file = e.target.files[0];
-    if (file) {
-      // Check file size (max 2MB)
-      if (file.size > 2 * 1024 * 1024) {
-        setError('Image size should be less than 2MB');
-        return;
-      }
-      setImageFile(file);
-      const reader = new FileReader();
-      reader.onload = () => setImagePreview(reader.result);
-      reader.readAsDataURL(file);
-    }
-  };
-
   const validateForm = () => {
-    const errors = {};
-    
-    if (!formData.name.trim()) {
-      errors.name = 'Name is required';
+    if (!formData.firstName || !formData.lastName || !formData.email) {
+      setError('Please complete all contact information');
+      return false;
     }
-    
-    if (!formData.email.trim()) {
-      errors.email = 'Email is required';
-    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
-      errors.email = 'Invalid email address';
+    if (!formData.address || !formData.city || !formData.country || !formData.zipCode) {
+      setError('Please complete all shipping information');
+      return false;
     }
-    
-    if (formData.contact && !/^[\+]?[(]?[0-9]{3}[)]?[-\s\.]?[0-9]{3}[-\s\.]?[0-9]{4,6}$/.test(formData.contact)) {
-      errors.contact = 'Invalid phone number';
-    }
-    
-    if (formData.pincode && !/^\d+$/.test(formData.pincode)) {
-      errors.pincode = 'ZIP code must be numeric';
-    }
-    
-    return errors;
+    return true;
   };
 
-const handleSubmit = async (e) => {
-  e.preventDefault();
-  setError(null);
-  setSuccess(null);
-  
-  const errors = validateForm();
-  if (Object.keys(errors).length > 0) {
-    setError('Please correct the errors in the form');
-    return;
-  }
-  
-  setIsUpdating(true);
-
-  try {
-    const token = localStorage.getItem('token');
-    const userData = JSON.parse(localStorage.getItem('user'));
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!validateForm()) return;
     
-    if (!userData?._id) {
-      throw new Error('User ID not found');
+    const token = localStorage.getItem("token") || 
+                 document.cookie.split('; ').find(row => row.startsWith('token='))?.split('=')[1];
+    
+    if (!token || !user?._id || !cart) {
+      router.push("/login");
+      return;
     }
 
-    const formDataToSend = new FormData();
-    
-    // Append all form fields
-    formDataToSend.append('name', formData.name);
-    formDataToSend.append('email', formData.email);
-    if (formData.contact) formDataToSend.append('contact', formData.contact);
-    if (formData.address) formDataToSend.append('address', formData.address);
-    if (formData.state) formDataToSend.append('state', formData.state);
-    if (formData.city) formDataToSend.append('city', formData.city);
-    if (formData.country) formDataToSend.append('country', formData.country);
-    if (formData.pincode) formDataToSend.append('pincode', formData.pincode);
-    
-    // Append image file if changed
-    if (imageFile) {
-      formDataToSend.append('pfp', imageFile);
-    }
+    setProcessingPayment(true);
+    setError(null);
 
-    const res = await fetch(`https://api.agiigo.com/api/userprofile/${userData._id}`, {
-      method: 'PATCH',
-      headers: {
-        'Authorization': `Bearer ${token}`
-      },
-      body: formDataToSend
-    });
+    try {
+      // Prepare order data
+      const orderData = {
+        userId: user._id,
+        shippingAddress: {
+          street: formData.address,
+          city: formData.city,
+          state: formData.state,
+          country: formData.country,
+          zipCode: formData.zipCode
+        },
+        contactInfo: {
+          firstName: formData.firstName,
+          lastName: formData.lastName,
+          email: formData.email,
+          phone: formData.phone
+        },
+        paymentMethod: formData.paymentMethod,
+        currency: cart.items[0]?.productId?.priceCurrency || 'USD'
+      };
 
-    if (!res.ok) {
-      const errorData = await res.json();
-      throw new Error(errorData.message || 'Failed to update profile');
-    }
+      if (formData.paymentMethod === 'credit-card') {
+        // Stripe Checkout flow
+        const orderRes = await fetch("https://api.agiigo.com/api/order/create-from-cart", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`
+          },
+          body: JSON.stringify({
+            ...orderData,
+            paymentStatus: 'Pending'
+          }),
+        });
 
-    const responseData = await res.json();
+        if (!orderRes.ok) {
+          const errorData = await orderRes.json();
+          throw new Error(errorData.message || "Failed to create order");
+        }
 
-    // Update all states with fresh data
-    const updatedUser = {
-      ...userData,
-      ...responseData,
-      pfp: responseData.pfp || userData.pfp
-    };
-
-    setUser(updatedUser);
-    setImagePreview(responseData.pfp || userData.pfp || null);
-    setFormData({
-      name: responseData.name || '',
-      email: responseData.email || '',
-      contact: responseData.contact || '',
-      address: responseData.address || '',
-      state: responseData.state || '',
-      city: responseData.city || '',
-      country: responseData.country || '',
-      pincode: responseData.pincode?.toString() || ''
-    });
-    
-    // Update localStorage with merged data
-    localStorage.setItem('user', JSON.stringify(updatedUser));
-    setSuccess('Profile updated successfully!');
-    setIsEditing(false);
-    setImageFile(null);
-  } catch (error) {
-    console.error('Update error:', error);
-    setError(error.message || 'An error occurred while updating profile');
-  } finally {
-    setIsUpdating(false);
-  }
-};
-
-  if (isLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-orange-500"></div>
-      </div>
-    );
-  }
-
-  if (!user) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <p>Redirecting to login...</p>
-      </div>
-    );
-  }
-
-  return (
-    <div className="min-h-screen bg-gray-50 text-black">
-      {/* Header */}
-      <div className="bg-white shadow-sm">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center py-4">
-            <button 
-              onClick={() => router.back()}
-              className="flex items-center text-gray-600 hover:text-orange-500"
-            >
-              <ArrowLeft className="h-5 w-5 mr-1" />
-              <span>Back</span>
-            </button>
-            <h1 className="text-xl font-bold text-gray-900">My Account</h1>
-            <div className="w-24"></div>
-          </div>
-        </div>
-      </div>
-
-      {/* Main Content */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="flex flex-col lg:flex-row gap-8">
-          {/* Sidebar Navigation */}
-          <div className="w-full lg:w-64 flex-shrink-0">
-            <div className="bg-white rounded-lg shadow-sm overflow-hidden">
-              <div className="p-6 border-b border-gray-200">
-                <div className="flex flex-col items-center space-y-4">
-                  <div className="relative">
-                    {imagePreview ? (
-                      <img 
-                        src={imagePreview} 
-                        alt="Profile" 
-                        className="w-20 h-20 rounded-full object-cover border-2 border-white shadow-md"
-                      />
-                    ) : (
-                      <div className="w-20 h-20 rounded-full bg-gray-300 flex items-center justify-center border-2 border-white shadow-md">
-                        <User className="h-10 w-10 text-gray-500" />
-                      </div>
-                    )}
-                  </div>
-                  <div className="text-center">
-                    <h2 className="font-semibold">{user.name}</h2>
-                    <p className="text-sm text-gray-500">{user.email}</p>
-                  </div>
-                </div>
-              </div>
-              
-              <nav className="p-4 space-y-2">
-                <button
-                  onClick={() => setActiveTab('profile')}
-                  className={`w-full flex items-center space-x-3 px-3 py-3 rounded-md text-sm font-medium ${activeTab === 'profile' ? 'bg-orange-50 text-orange-600' : 'text-gray-700 hover:bg-gray-100'}`}
-                >
-                  <User className="h-5 w-5" />
-                  <span>Personal Information</span>
-                </button>
-                
-                <button
-                  onClick={() => setActiveTab('orders')}
-                  className={`w-full flex items-center space-x-3 px-3 py-3 rounded-md text-sm font-medium ${activeTab === 'orders' ? 'bg-orange-50 text-orange-600' : 'text-gray-700 hover:bg-gray-100'}`}
-                >
-                  <ShoppingBag className="h-5 w-5" />
-                  <span>My Orders</span>
-                </button>
-                
-                <button
-                  onClick={() => setActiveTab('security')}
-                  className={`w-full flex items-center space-x-3 px-3 py-3 rounded-md text-sm font-medium ${activeTab === 'security' ? 'bg-orange-50 text-orange-600' : 'text-gray-700 hover:bg-gray-100'}`}
-                >
-                  <Shield className="h-5 w-5" />
-                  <span>Security</span>
-                </button>
-                
-                <button
-                  onClick={handleLogout}
-                  className="w-full flex items-center space-x-3 px-3 py-3 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-100"
-                >
-                  <LogOut className="h-5 w-5" />
-                  <span>Logout</span>
-                </button>
-              </nav>
-            </div>
-          </div>
-
-          {/* Main Panel */}
-          <div className="flex-1">
-            {/* Profile Tab */}
-            {activeTab === 'profile' && user && (
-  <div className="bg-white rounded-lg shadow-sm overflow-hidden">
-    <div className="p-6 border-b border-gray-200 flex justify-between items-center">
-      <h2 className="text-lg font-semibold">Personal Information</h2>
-      {!isEditing ? (
-        <button
-          onClick={() => setIsEditing(true)}
-          className="flex items-center space-x-1 text-orange-500 hover:text-orange-600"
-        >
-          <Edit className="h-4 w-4" />
-          <span>Edit</span>
-        </button>
-      ) : (
-        <button
-          onClick={() => {
-            setIsEditing(false);
-            setImageFile(null);
-            setImagePreview(user.pfp || null);
-          }}
-          className="flex items-center space-x-1 text-gray-500 hover:text-gray-600"
-        >
-          <X className="h-4 w-4" />
-          <span>Cancel</span>
-        </button>
-      )}
-    </div>
-
-    {/* Error/Success Messages */}
-    {error && (
-      <div className="mx-6 mt-4 p-3 bg-red-50 text-red-600 rounded-md text-sm">
-        {error}
-      </div>
-    )}
-
-    {success && (
-      <div className="mx-6 mt-4 p-3 bg-green-50 text-green-600 rounded-md text-sm">
-        {success}
-      </div>
-    )}
-
-    <form onSubmit={handleSubmit} className="p-6">
-      {/* Profile Picture - Always visible */}
-      <div className="flex flex-col items-center mb-8">
-        <div className="relative mb-4 group">
-          <img 
-            src={imagePreview || user.pfp } 
-            alt="Profile" 
-            className="w-32 h-32 rounded-full object-cover border-4 border-white shadow-md"
-          />
-          {isEditing && (
-            <div className="absolute inset-0 rounded-full bg-black bg-opacity-30 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-              <Camera className="h-8 w-8 text-white" />
-            </div>
-          )}
-        </div>
+        const order = await orderRes.json();
+        const stripe = await stripePromise;
         
-        {isEditing && (
-          <div className="w-full max-w-xs">
-            <label className="block text-sm font-medium text-gray-700 mb-1 text-center">
-              Change Profile Photo
-            </label>
-            <div className="flex items-center justify-center gap-2">
-              <label className="cursor-pointer">
-                <span className="px-4 py-2 bg-orange-500 text-white rounded-md hover:bg-orange-600 text-sm">
-                  Upload Photo
-                </span>
-                <input
-                  type="file"
-                  accept="image/*"
-                  onChange={handleImageChange}
-                  className="hidden"
-                />
-              </label>
-              {imagePreview && imagePreview !== user.pfp && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    setImageFile(null);
-                    setImagePreview(user.pfp || null);
-                  }}
-                  className="px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 text-sm"
-                >
-                  Remove
-                </button>
-              )}
-            </div>
-            <p className="mt-1 text-xs text-gray-500 text-center">
-              JPG, GIF or PNG. Max size 2MB
-            </p>
-          </div>
-        )}
-      </div>
+        const checkoutResponse = await fetch("https://api.agiigo.com/api/payment/create-checkout-session", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`
+          },
+          body: JSON.stringify({
+            userId: user._id,
+            cartId: cart._id,
+            orderId: order._id,
+            customerEmail: formData.email,
+            currency: orderData.currency
+          }),
+        });
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {/* View Mode (non-editing) */}
-        {!isEditing ? (
-          <>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Full Name</label>
-              <p className="px-3 py-2 bg-gray-50 rounded-md">{user.name || 'Not provided'}</p>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
-              <p className="px-3 py-2 bg-gray-50 rounded-md">{user.email}</p>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Phone Number</label>
-              <p className="px-3 py-2 bg-gray-50 rounded-md">{user.contact || 'Not provided'}</p>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Address</label>
-              <p className="px-3 py-2 bg-gray-50 rounded-md">{user.address || 'Not provided'}</p>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">City</label>
-              <p className="px-3 py-2 bg-gray-50 rounded-md">{user.city || 'Not provided'}</p>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">State</label>
-              <p className="px-3 py-2 bg-gray-50 rounded-md">{user.state || 'Not provided'}</p>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Country</label>
-              <p className="px-3 py-2 bg-gray-50 rounded-md">{user.country || 'Not provided'}</p>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">ZIP Code</label>
-              <p className="px-3 py-2 bg-gray-50 rounded-md">{user.pincode || 'Not provided'}</p>
-            </div>
-          </>
-        ) : (
-          <>
-            {/* Edit Mode (form inputs) */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Full Name</label>
-              <input
-                type="text"
-                name="name"
-                value={formData.name}
-                onChange={handleInputChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
-                required
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
-              <input
-                type="email"
-                name="email"
-                value={formData.email}
-                onChange={handleInputChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
-                required
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Phone Number</label>
-              <input
-                type="tel"
-                name="contact"
-                value={formData.contact}
-                onChange={handleInputChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
-                placeholder="+91 9876543210"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Address</label>
-              <input
-                type="text"
-                name="address"
-                value={formData.address}
-                onChange={handleInputChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">City</label>
-              <input
-                type="text"
-                name="city"
-                value={formData.city}
-                onChange={handleInputChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">State</label>
-              <input
-                type="text"
-                name="state"
-                value={formData.state}
-                onChange={handleInputChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Country</label>
-              <input
-                type="text"
-                name="country"
-                value={formData.country}
-                onChange={handleInputChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">ZIP Code</label>
-              <input
-                type="text"
-                name="pincode"
-                value={formData.pincode}
-                onChange={handleInputChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
-              />
-            </div>
-          </>
-        )}
-      </div>
+        if (!checkoutResponse.ok) throw new Error("Failed to create checkout session");
+        
+        const { id: sessionId } = await checkoutResponse.json();
 
-      {isEditing && (
-        <div className="mt-8 flex justify-end">
-          <button
-            type="submit"
-            disabled={isUpdating}
-            className={`px-6 py-2 bg-orange-500 text-white rounded-md hover:bg-orange-600 focus:outline-none focus:ring-2 focus:ring-orange-500 flex items-center space-x-2 ${isUpdating ? 'opacity-70 cursor-not-allowed' : ''}`}
+        const { error } = await stripe.redirectToCheckout({ sessionId });
+
+        if (error) throw error;
+      } else {
+        // Original Cash on Delivery flow (unchanged)
+        const res = await fetch("https://api.agiigo.com/api/order/create-from-cart", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`
+          },
+          body: JSON.stringify(orderData),
+        });
+
+        if (!res.ok) {
+          const errorData = await res.json();
+          throw new Error(errorData.message || "Failed to place order");
+        }
+        
+        const order = await res.json();
+        router.push(`/order-confirmation?orderId=${order._id}`);
+      }
+    } catch (err) {
+      console.error("Checkout error:", err);
+      setError(err.message || "Failed to process your order. Please try again.");
+    } finally {
+      setProcessingPayment(false);
+    }
+  };
+
+  const hasCartItems = () => {
+    return cart?.items && Array.isArray(cart.items) && cart.items.length > 0;
+  };
+
+  if (loading) return <CheckoutSkeleton />;
+
+  if (error) return (
+    <div className="bg-white text-black min-h-screen">
+      <Nav />
+      <div className="container mx-auto px-4 py-20 text-center max-w-3xl">
+        <div className="bg-white p-8 rounded-lg shadow-sm border border-gray-200">
+          <h2 className="text-2xl font-bold text-gray-800 mb-4">Something went wrong</h2>
+          <p className="text-red-500 mb-6">{error}</p>
+          <button 
+            onClick={() => router.push("/cart")}
+            className="mt-4 bg-[#EB8426] text-white py-3 px-8 rounded-md hover:bg-orange-700 transition font-medium text-lg w-full max-w-xs"
           >
-            {isUpdating ? (
-              <>
-                <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                </svg>
-                <span>Saving...</span>
-              </>
-            ) : (
-              <>
-                <Save className="h-4 w-4" />
-                <span>Save Changes</span>
-              </>
-            )}
+            Back to Cart
           </button>
         </div>
-      )}
-    </form>
-  </div>
-)}
+      </div>
+      <Footer />
+    </div>
+  );
 
-            {/* Orders Tab */}
-            {activeTab === 'orders' && (
-              <div className="bg-white rounded-lg shadow-sm overflow-hidden">
-                <div className="p-6 border-b border-gray-200">
-                  <h2 className="text-lg font-semibold">Order History</h2>
-                  <p className="text-sm text-gray-500 mt-1">
-                    {orders.length} {orders.length === 1 ? 'order' : 'orders'} placed
-                  </p>
+  if (!cart || !hasCartItems()) return (
+    <div className="bg-white text-black min-h-screen">
+      <Nav />
+      <div className="container mx-auto px-4 py-20">
+        <div className="max-w-3xl mx-auto bg-white p-8 rounded-lg shadow-sm border border-gray-200 text-center">
+          <h2 className="text-2xl font-bold text-gray-800 mb-2">Your cart is empty</h2>
+          <p className="text-gray-600 mb-8">Please add items to your cart before checkout</p>
+          <Link 
+            href="/shop"
+            className="bg-[#EB8426] text-white py-3 px-8 rounded-md hover:bg-orange-700 transition font-medium text-lg inline-block"
+          >
+            Shop Now
+          </Link>
+        </div>
+      </div>
+      <Footer />
+    </div>
+  );
+
+  return (
+    <div className="bg-white text-black min-h-screen">
+      <Nav />
+      <main className="container mx-auto px-4 py-8">
+        <div className="flex items-center text-sm text-gray-500 mb-6">
+          <Link href="/" className="hover:text-[#EB8426]">Home</Link>
+          <FaChevronRight className="mx-2 text-xs" />
+          <Link href="/cart" className="hover:text-[#EB8426]">Cart</Link>
+          <FaChevronRight className="mx-2 text-xs" />
+          <span className="text-[#EB8426]">Checkout</span>
+        </div>
+
+        <h1 className="text-3xl font-bold text-gray-800 mb-6">Checkout</h1>
+        
+        <form onSubmit={handleSubmit} className="flex flex-col lg:flex-row gap-6">
+          <div className="lg:w-2/3">
+            <div className="bg-white rounded-lg border border-gray-200 p-6 shadow-sm mb-6">
+              <h2 className="text-xl font-bold text-gray-800 mb-6 pb-2 border-b border-gray-100">Contact Information</h2>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                <div>
+                  <label htmlFor="firstName" className="block text-sm font-medium text-gray-700 mb-1">First Name</label>
+                  <input
+                    type="text"
+                    id="firstName"
+                    name="firstName"
+                    value={formData.firstName}
+                    onChange={handleInputChange}
+                    required
+                    className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-[#EB8426] focus:border-[#EB8426]"
+                  />
+                </div>
+                <div>
+                  <label htmlFor="lastName" className="block text-sm font-medium text-gray-700 mb-1">Last Name</label>
+                  <input
+                    type="text"
+                    id="lastName"
+                    name="lastName"
+                    value={formData.lastName}
+                    onChange={handleInputChange}
+                    required
+                    className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-[#EB8426] focus:border-[#EB8426]"
+                  />
+                </div>
+              </div>
+
+              <div className="mb-6">
+                <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                <input
+                  type="email"
+                  id="email"
+                  name="email"
+                  value={formData.email}
+                  onChange={handleInputChange}
+                  required
+                  className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-[#EB8426] focus:border-[#EB8426]"
+                />
+              </div>
+
+              <div className="mb-6">
+                <label htmlFor="phone" className="block text-sm font-medium text-gray-700 mb-1">Phone Number</label>
+                <input
+                  type="tel"
+                  id="phone"
+                  name="phone"
+                  value={formData.phone}
+                  onChange={handleInputChange}
+                  required
+                  className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-[#EB8426] focus:border-[#EB8426]"
+                />
+              </div>
+
+              <h2 className="text-xl font-bold text-gray-800 mb-6 pb-2 border-b border-gray-100">Shipping Address</h2>
+              
+              <div className="mb-6">
+                <label htmlFor="address" className="block text-sm font-medium text-gray-700 mb-1">Street Address</label>
+                <input
+                    type="text"
+                    id="address"
+                    name="address"
+                    value={formData.address}
+                    onChange={handleInputChange}
+                    required
+                    className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-[#EB8426] focus:border-[#EB8426]"
+                  />
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                <div>
+                  <label htmlFor="country" className="block text-sm font-medium text-gray-700 mb-1">Country</label>
+                  <select
+                    id="country"
+                    name="country"
+                    value={formData.country}
+                    onChange={handleInputChange}
+                    required
+                    className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-[#EB8426] focus:border-[#EB8426]"
+                  >
+                    <option value="">Select Country</option>
+                    <option value="US">United States</option>
+                    <option value="CA">Canada</option>
+                    <option value="UK">United Kingdom</option>
+                  </select>
+                </div>
+                <div>
+                  <label htmlFor="state" className="block text-sm font-medium text-gray-700 mb-1">State/Province</label>
+                  <input
+                    type="text"
+                    id="state"
+                    name="state"
+                    value={formData.state}
+                    onChange={handleInputChange}
+                    required
+                    className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-[#EB8426] focus:border-[#EB8426]"
+                  />
+                </div>
+                <div>
+                  <label htmlFor="zipCode" className="block text-sm font-medium text-gray-700 mb-1">ZIP/Postal Code</label>
+                  <input
+                    type="text"
+                    id="zipCode"
+                    name="zipCode"
+                    value={formData.zipCode}
+                    onChange={handleInputChange}
+                    required
+                    className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-[#EB8426] focus:border-[#EB8426]"
+                  />
+                </div>
+              </div>
+
+              <div className="mb-6">
+                <label htmlFor="city" className="block text-sm font-medium text-gray-700 mb-1">City</label>
+                <input
+                  type="text"
+                  id="city"
+                  name="city"
+                  value={formData.city}
+                  onChange={handleInputChange}
+                  required
+                  className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-[#EB8426] focus:border-[#EB8426]"
+                />
+              </div>
+
+              <div className="flex items-center">
+                <input
+                  type="checkbox"
+                  id="saveInfo"
+                  name="saveInfo"
+                  checked={formData.saveInfo}
+                  onChange={handleInputChange}
+                  className="h-4 w-4 text-[#EB8426] focus:ring-[#EB8426] border-gray-300 rounded"
+                />
+                <label htmlFor="saveInfo" className="ml-2 block text-sm text-gray-700">
+                  Save this information for next time
+                </label>
+              </div>
+            </div>
+
+            <div className="bg-white rounded-lg border border-gray-200 p-6 shadow-sm">
+              <h2 className="text-xl font-bold text-gray-800 mb-6 pb-2 border-b border-gray-100">Payment Method</h2>
+              
+              <div className="space-y-4">
+                <div className="flex items-center">
+                  <input
+                    type="radio"
+                    id="credit-card"
+                    name="paymentMethod"
+                    value="credit-card"
+                    checked={formData.paymentMethod === 'credit-card'}
+                    onChange={handleInputChange}
+                    className="h-4 w-4 text-[#EB8426] focus:ring-[#EB8426] border-gray-300"
+                  />
+                  <label htmlFor="credit-card" className="ml-3 block text-sm font-medium text-gray-700">
+                    Credit/Debit Card (Stripe)
+                  </label>
                 </div>
                 
-                {ordersLoading ? (
-                  <div className="p-6 flex justify-center">
-                    <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-orange-500"></div>
-                  </div>
-                ) : orders.length === 0 ? (
-                  <div className="p-6 text-center text-gray-500">
-                    <ShoppingBag className="mx-auto h-12 w-12 text-gray-400 mb-4" />
-                    <p>You haven't placed any orders yet</p>
-                    <button
-                      onClick={() => router.push('/shop')}
-                      className="mt-4 px-4 py-2 bg-orange-500 text-white rounded-md hover:bg-orange-600"
-                    >
-                      Start Shopping
-                    </button>
-                  </div>
+                <div className="flex items-center">
+                  <input
+                    type="radio"
+                    id="cash-on-delivery"
+                    name="paymentMethod"
+                    value="Cash on Delivery"
+                    checked={formData.paymentMethod === 'Cash on Delivery'}
+                    onChange={handleInputChange}
+                    className="h-4 w-4 text-[#EB8426] focus:ring-[#EB8426] border-gray-300"
+                  />
+                  <label htmlFor="cash-on-delivery" className="ml-3 block text-sm font-medium text-gray-700">
+                    Cash on Delivery
+                  </label>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="lg:w-1/3">
+            <div className="bg-white border border-gray-200 rounded-lg p-6 shadow-sm sticky top-4">
+              <h2 className="text-xl font-bold text-gray-800 mb-6 pb-2 border-b border-gray-100">Order Summary</h2>
+              
+              <div className="space-y-4 mb-6">
+                <div className="flex justify-between text-gray-600">
+                  <span>Subtotal ({cart.items.length} items)</span>
+                  <span className="font-medium">{cart.totalPrice} {cart.items[0]?.productId?.priceCurrency || 'USD'}</span>
+                </div>
+                <div className="flex justify-between text-gray-600">
+                  <span>Shipping</span>
+                  <span className="text-green-600 font-medium">Free</span>
+                </div>
+                <div className="flex justify-between text-gray-600">
+                  <span>Tax</span>
+                  <span className="font-medium">Calculated at checkout</span>
+                </div>
+                <div className="flex justify-between text-lg font-bold text-gray-800 pt-4 border-t border-gray-100">
+                  <span>Total</span>
+                  <span>{cart.totalPrice} {cart.items[0]?.productId?.priceCurrency || 'USD'}</span>
+                </div>
+              </div>
+
+              <button
+                type="submit"
+                disabled={processingPayment}
+                className={`w-full bg-[#EB8426] hover:bg-orange-700 text-white py-3 rounded-md transition font-medium text-lg mb-4 shadow-md hover:shadow-lg flex items-center justify-center gap-2 ${
+                  processingPayment ? 'opacity-75 cursor-not-allowed' : ''
+                }`}
+              >
+                {processingPayment ? (
+                  <>
+                    <FaSpinner className="animate-spin" /> Processing...
+                  </>
                 ) : (
-                  <div className="divide-y divide-gray-200">
-                    {orders
-                      .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
-                      .map((order) => (
-                        <div key={order._id} className="p-6 hover:bg-gray-50 transition-colors">
-                          <div className="flex flex-col sm:flex-row justify-between gap-4">
-                            <div className="flex-1">
-                              <div className="flex items-baseline gap-2">
-                                <h3 className="font-medium text-gray-900">
-                                  Order #{order._id.substring(0, 8).toUpperCase()}
-                                </h3>
-                                <span className="text-xs bg-gray-100 px-2 py-1 rounded">
-                                  {order.paymentMethod}
-                                </span>
-                              </div>
-                              <p className="text-sm text-gray-500 mt-1">
-                                Placed on {new Date(order.createdAt).toLocaleDateString('en-US', {
-                                  year: 'numeric',
-                                  month: 'long',
-                                  day: 'numeric'
-                                })}
-                              </p>
-                              <div className="mt-2 flex items-center">
-                                <span className="text-sm font-medium mr-2">Status:</span>
-                                <span className={`text-sm px-2 py-1 rounded ${
-                                  order.orderStatus === 'Delivered' ? 'bg-green-100 text-green-800' :
-                                  order.orderStatus === 'Cancelled' ? 'bg-red-100 text-red-800' :
-                                  'bg-orange-100 text-orange-800'
-                                }`}>
-                                  {order.orderStatus}
-                                </span>
-                              </div>
-                            </div>
-                            
-                            <div className="sm:text-right">
-                              <p className="font-medium">
-                                {order.currency} {order.totalAmount.toFixed(2)}
-                              </p>
-                              <button
-                                onClick={() => router.push(`/orders/${order._id}`)}
-                                className="mt-2 text-sm text-orange-600 hover:text-orange-700 font-medium"
-                              >
-                                View Details &rarr;
-                              </button>
-                            </div>
-                          </div>
-                          
-                          <div className="mt-4">
-                            <h4 className="text-sm font-medium mb-2">Items ({order.items.length})</h4>
-                            <div className="flex space-x-4 overflow-x-auto pb-2">
-                              {order.items.slice(0, 4).map((item) => (
-                                <div key={item._id} className="flex-shrink-0">
-                                  <div className="h-20 w-20 rounded-md bg-gray-100 overflow-hidden border border-gray-200">
-                                    {item.product?.image ? (
-                                      <img
-                                        src={item.product.image}
-                                        alt={item.product.name}
-                                        className="h-full w-full object-cover"
-                                      />
-                                    ) : (
-                                      <div className="h-full w-full flex items-center justify-center text-gray-400">
-                                        <ShoppingBag className="h-6 w-6" />
-                                      </div>
-                                    )}
-                                  </div>
-                                  <p className="mt-1 text-xs text-gray-600 truncate w-20">
-                                    {item.product?.name || 'Unknown Product'}
-                                  </p>
-                                  <p className="text-xs font-medium">
-                                    Qty: {item.quantity}
-                                  </p>
-                                </div>
-                              ))}
-                              {order.items.length > 4 && (
-                                <div className="flex-shrink-0 flex items-center justify-center">
-                                  <div className="h-20 w-20 rounded-md bg-gray-50 border border-gray-200 flex items-center justify-center">
-                                    <span className="text-sm text-gray-500">
-                                      +{order.items.length - 4} more
-                                    </span>
-                                  </div>
-                                </div>
-                              )}
-                            </div>
-                          </div>
-
-                          <div className="mt-4">
-                            <div className="flex items-center">
-                              <div className="flex-1">
-                                <div className="flex text-xs text-gray-500 justify-between mb-1">
-                                  <span>Order Placed</span>
-                                  <span>Processed</span>
-                                  <span>Shipped</span>
-                                  <span>Delivered</span>
-                                </div>
-                                <div className="relative h-2 bg-gray-200 rounded-full overflow-hidden">
-                                  <div 
-                                    className="absolute top-0 left-0 h-full bg-orange-500"
-                                    style={{
-                                      width: order.orderStatus === 'Processing' ? '33%' :
-                                             order.orderStatus === 'Shipped' ? '66%' :
-                                             order.orderStatus === 'Delivered' ? '100%' : '0%'
-                                    }}
-                                  ></div>
-                                </div>
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      ))}
-                  </div>
+                  <>
+                    <FaLock /> Complete Order
+                  </>
                 )}
-              </div>
-            )}
+              </button>
 
-            {/* Security Tab */}
-            {activeTab === 'security' && (
-              <div className="bg-white rounded-lg shadow-sm overflow-hidden">
-                <div className="p-6 border-b border-gray-200">
-                  <h2 className="text-lg font-semibold">Security</h2>
-                </div>
-                <div className="p-6">
-                  <div className="space-y-6">
-                    <div>
-                      <h3 className="text-md font-medium mb-3">Change Password</h3>
-                      <div className="space-y-4">
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">Current Password</label>
-                          <input
-                            type="password"
-                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">New Password</label>
-                          <input
-                            type="password"
-                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">Confirm New Password</label>
-                          <input
-                            type="password"
-                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
-                          />
-                        </div>
-                        <div className="pt-2">
-                          <button className="px-4 py-2 bg-orange-500 text-white rounded-md hover:bg-orange-600">
-                            Update Password
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
+              <div className="text-center text-xs text-gray-500">
+                <p>By placing your order, you agree to our <Link href="/terms" className="text-[#EB8426] hover:underline">Terms of Service</Link> and <Link href="/privacy" className="text-[#EB8426] hover:underline">Privacy Policy</Link>.</p>
               </div>
-            )}
+            </div>
+          </div>
+        </form>
+      </main>
+      <Footer />
+    </div>
+  );
+}
+
+function CheckoutSkeleton() {
+  return (
+    <div className="bg-white text-black min-h-screen">
+      <Nav />
+      <div className="container mx-auto px-4 py-8">
+        <div className="flex items-center text-sm text-gray-300 mb-6">
+          <div className="h-4 w-16 bg-gray-200 rounded animate-pulse"></div>
+          <FaChevronRight className="mx-2 text-xs text-gray-200" />
+          <div className="h-4 w-16 bg-gray-200 rounded animate-pulse"></div>
+          <FaChevronRight className="mx-2 text-xs text-gray-200" />
+          <div className="h-4 w-24 bg-gray-200 rounded animate-pulse"></div>
+        </div>
+
+        <div className="h-8 w-64 bg-gray-200 rounded animate-pulse mb-6"></div>
+        
+        <div className="flex flex-col lg:flex-row gap-6">
+          <div className="lg:w-2/3 space-y-6">
+            <div className="bg-white rounded-lg border border-gray-200 p-6 shadow-sm">
+              <div className="h-7 w-48 bg-gray-200 rounded animate-pulse mb-6"></div>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                {[...Array(2)].map((_, i) => (
+                  <div key={i}>
+                    <div className="h-4 w-24 bg-gray-200 rounded animate-pulse mb-2"></div>
+                    <div className="h-10 w-full bg-gray-200 rounded animate-pulse"></div>
+                  </div>
+                ))}
+              </div>
+
+              {[...Array(2)].map((_, i) => (
+                <div key={i} className="mb-6">
+                  <div className="h-4 w-24 bg-gray-200 rounded animate-pulse mb-2"></div>
+                  <div className="h-10 w-full bg-gray-200 rounded animate-pulse"></div>
+                </div>
+              ))}
+
+              <div className="h-7 w-48 bg-gray-200 rounded animate-pulse mb-6 mt-8"></div>
+              
+              <div className="mb-6">
+                <div className="h-4 w-24 bg-gray-200 rounded animate-pulse mb-2"></div>
+                <div className="h-10 w-full bg-gray-200 rounded animate-pulse"></div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                {[...Array(3)].map((_, i) => (
+                  <div key={i}>
+                    <div className="h-4 w-24 bg-gray-200 rounded animate-pulse mb-2"></div>
+                    <div className="h-10 w-full bg-gray-200 rounded animate-pulse"></div>
+                  </div>
+                ))}
+              </div>
+
+              <div className="flex items-center">
+                <div className="h-4 w-4 bg-gray-200 rounded animate-pulse"></div>
+                <div className="h-4 w-48 bg-gray-200 rounded animate-pulse ml-2"></div>
+              </div>
+            </div>
+
+            <div className="bg-white rounded-lg border border-gray-200 p-6 shadow-sm">
+              <div className="h-7 w-48 bg-gray-200 rounded animate-pulse mb-6"></div>
+              
+              <div className="space-y-4">
+                {[...Array(3)].map((_, i) => (
+                  <div key={i} className="flex items-center">
+                    <div className="h-4 w-4 bg-gray-200 rounded animate-pulse"></div>
+                    <div className="h-4 w-32 bg-gray-200 rounded animate-pulse ml-3"></div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          <div className="lg:w-1/3">
+            <div className="bg-white border border-gray-200 rounded-lg p-6 shadow-sm">
+              <div className="h-7 w-32 bg-gray-200 rounded animate-pulse mb-6"></div>
+              
+              <div className="space-y-4 mb-6">
+                {[...Array(4)].map((_, i) => (
+                  <div key={i} className="flex justify-between">
+                    <div className="h-4 bg-gray-200 rounded animate-pulse w-24"></div>
+                    <div className="h-4 bg-gray-200 rounded animate-pulse w-16"></div>
+                  </div>
+                ))}
+              </div>
+
+              <div className="h-12 bg-gray-200 rounded animate-pulse mb-4"></div>
+
+              <div className="h-3 w-full bg-gray-200 rounded animate-pulse"></div>
+            </div>
           </div>
         </div>
       </div>
+      <Footer />
     </div>
   );
 }

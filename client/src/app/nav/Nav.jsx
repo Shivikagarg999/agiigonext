@@ -16,22 +16,76 @@ export default function Nav() {
   const profileDropdownRef = useRef(null);
   const router = useRouter();
 
-  useEffect(() => {
-    const token = localStorage.getItem("token");
-    const userData = localStorage.getItem("user");
+  // Helper function to get token from localStorage or cookies
+  const getToken = () => {
+    if (typeof window === 'undefined') return null;
     
-    if (token && userData) {
-      setIsLoggedIn(true);
-      try {
-        setUser(JSON.parse(userData));
-      } catch (error) {
-        console.error("Error parsing user data:", error);
+    // Check localStorage first
+    const localStorageToken = localStorage.getItem("token");
+    if (localStorageToken) return localStorageToken;
+    
+    // Fallback to cookies
+    const cookieToken = document.cookie
+      .split('; ')
+      .find(row => row.startsWith('token='))
+      ?.split('=')[1];
+    
+    return cookieToken || null;
+  };
+
+  // Fetch user data from API
+  const fetchUserData = async (token) => {
+    try {
+      const res = await fetch("https://api.agiigo.com/api/users/me", {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json"
+        }
+      });
+      
+      if (res.ok) {
+        const userData = await res.json();
+        localStorage.setItem("user", JSON.stringify(userData));
+        return userData;
+      }
+      return null;
+    } catch (error) {
+      console.error("Error fetching user data:", error);
+      return null;
+    }
+  };
+
+  useEffect(() => {
+    const initializeAuth = async () => {
+      const token = getToken();
+      let userData = null;
+      
+      // Check for existing user data in localStorage
+      const storedUser = localStorage.getItem("user");
+      if (storedUser) {
+        try {
+          userData = JSON.parse(storedUser);
+        } catch (error) {
+          console.error("Error parsing stored user data:", error);
+        }
+      }
+      
+      // If we have a token but no user data (or it's invalid), fetch fresh data
+      if (token && (!userData || !userData._id)) {
+        userData = await fetchUserData(token);
+      }
+      
+      // Update state
+      if (token && userData) {
+        setIsLoggedIn(true);
+        setUser(userData);
+      } else {
+        setIsLoggedIn(false);
         setUser(null);
       }
-    } else {
-      setIsLoggedIn(false);
-      setUser(null);
-    }
+    };
+
+    initializeAuth();
 
     const fetchCategories = async () => {
       try {
@@ -53,9 +107,7 @@ export default function Nav() {
       }
       
       try {
-        const token = localStorage.getItem("token") || 
-                     document.cookie.split('; ').find(row => row.startsWith('token='))?.split('=')[1];
-        
+        const token = getToken();
         if (!token) return;
 
         const res = await fetch(`https://api.agiigo.com/api/cart?userId=${user._id}`, {
@@ -67,11 +119,7 @@ export default function Nav() {
         
         if (res.ok) {
           const data = await res.json();
-          if (data?.items && Array.isArray(data.items)) {
-            setCartCount(data.items.length);
-          } else {
-            setCartCount(0);
-          }
+          setCartCount(data?.items?.length || 0);
         }
       } catch (error) {
         console.error("Error fetching cart count:", error);
@@ -123,15 +171,21 @@ export default function Nav() {
   };
 
   const handleLogout = () => {
+    // Clear all auth storage
     localStorage.removeItem("token");
     localStorage.removeItem("user");
     document.cookie = "token=; Path=/; Expires=Thu, 01 Jan 1970 00:00:01 GMT;";
     document.cookie = "user=; Path=/; Expires=Thu, 01 Jan 1970 00:00:01 GMT;";
+    
+    // Reset state
     setIsLoggedIn(false);
     setUser(null);
     setIsProfileDropdownOpen(false);
     setCartCount(0);
+    
+    // Redirect
     router.push("/");
+    router.refresh(); // Ensure client cache is cleared
   };
 
   return (
