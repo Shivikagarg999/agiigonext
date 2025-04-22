@@ -3,6 +3,35 @@ const router = express.Router();
 const Order = require('../models/Order');
 const Cart = require('../models/Cart');
 
+router.get('/user/:userId', async (req, res) => {
+  try {
+    const { userId } = req.params;
+
+    if (!mongoose.Types.ObjectId.isValid(userId)) {
+      return res.status(400).json({ message: 'Invalid user ID' });
+    }
+
+    const orders = await Order.find({ user: userId })
+      .populate({
+        path: 'items.product',
+        select: 'name images price' 
+      })
+      .sort({ createdAt: -1 });
+
+    if (!orders || orders.length === 0) {
+      return res.status(404).json({ message: 'No orders found for this user' });
+    }
+
+    res.status(200).json(orders);
+  } catch (error) {
+    console.error('Error fetching user orders:', error);
+    res.status(500).json({
+      message: 'Internal server error',
+      error: error.message
+    });
+  }
+});
+
 // Create order from cart (before checkout)
 router.post('/create-from-cart', async (req, res) => {
   try {

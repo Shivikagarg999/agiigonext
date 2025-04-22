@@ -344,7 +344,6 @@ app.put("/api/profile/seller/:sellerId", upload.single("pfp"), async (req, res) 
         res.status(500).json({ message: "Server error", error: error.message });
     }
 });
-
 // Update-edit product
 app.put("/api/products/:id", upload.single("image"), async (req, res) => {
   try {
@@ -469,7 +468,7 @@ app.post('/api/products/claim-guest', async (req, res) => {
   }
 });
 
-// ✅ Claim Guest Products After Login (modify your existing login route)
+
 app.post("/api/login", async (req, res) => {
   const { email, password, guestSession } = req.body;
   
@@ -529,10 +528,18 @@ app.post("/api/login", async (req, res) => {
         name: user.name,
         email: user.email,
         role: user.role,
+        address: user.address, 
+        pincode: user.pincode, 
+        contact: user.contact,
+        orders: user.orders,
+        city:user.city,
+        state:user.state,
+        pfp:user.pfp,
+        country:user.country
       },
       token,
-      claimedProducts: claimedProducts.length
-    });
+      claimedProducts: claimedProducts.length,
+    });    
 
   } catch (error) {
     console.error("Login error:", error);
