@@ -18,6 +18,7 @@ const subscriberRoutes = require("./routes/subscribers")
 const userRoutes = require("./routes/userRoutes")
 const paymentRoutes=require("./routes/payment")
 const orderRoutes= require("./routes/order")
+const sellerRoutes= require('./routes/seller')
 
 // Middleware
 app.use(express.json());
@@ -56,7 +57,8 @@ mongoose
 app.use('/api/subscribers', subscriberRoutes);
 app.use('/api/userprofile', userRoutes);
 app.use('/api/order', orderRoutes);
-app.use('/api/payment',paymentRoutes )
+app.use('/api/payment',paymentRoutes );
+app.use('/api/seller', sellerRoutes )
 
 
 // app.post("/api/login", async (req, res) => {

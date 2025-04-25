@@ -31,7 +31,7 @@ const userSchema = new mongoose.Schema({
         type: mongoose.Schema.Types.ObjectId,
         ref: 'Order',
     }],
-    products: [{  // Stores product references for sellers
+    products: [{
         type: mongoose.Schema.Types.ObjectId,
         ref: 'Product',
     }]
