@@ -5,7 +5,7 @@ import Nav from "@/app/nav/Nav";
 import Footer from "@/app/footer/Footer";
 import Cookies from "js-cookie";
 import { toast, ToastContainer } from "react-toastify";
-import { FaCheckCircle, FaShoppingCart } from "react-icons/fa";
+import { FaCheckCircle, FaShoppingCart, FaUser, FaStore, FaPhone, FaEnvelope, FaMapMarkerAlt } from "react-icons/fa";
 import "react-toastify/dist/ReactToastify.css";
 import BrowseByCategory from "../../category/page";
 import DOMPurify from 'dompurify';
@@ -19,6 +19,8 @@ export default function ProductDetails() {
   const [error, setError] = useState(null);
   const [user, setUser] = useState(null);
   const [isAddingToCart, setIsAddingToCart] = useState(false);
+  const [loadingSeller, setLoadingSeller] = useState(false);
+  const [seller, setSeller] = useState(null);
 
   useEffect(() => {
     async function fetchProduct() {
@@ -28,6 +30,11 @@ export default function ProductDetails() {
 
         const data = await res.json();
         setProduct(data);
+        
+        // Fetch seller details if product has a user reference
+        if (data.user && !data.isGuestProduct) {
+          fetchSellerDetails(data.user);
+        }
       } catch (err) {
         setError(err.message);
         toast.error("Failed to load product details");
@@ -58,6 +65,25 @@ export default function ProductDetails() {
       return DOMPurify.sanitize(html);
     }
     return html;
+  };
+
+  const fetchSellerDetails = async (sellerId) => {
+    setLoadingSeller(true);
+    try {
+      // Ensure sellerId is a string/number, not an object
+      const id = typeof sellerId === 'object' ? sellerId._id || sellerId.id : sellerId;
+      
+      const res = await fetch(`https://api.agiigo.com/api/seller/${id}`);
+      if (!res.ok) throw new Error("Failed to fetch seller details");
+      
+      const data = await res.json();
+      setSeller(data);
+    } catch (err) {
+      console.error("Error fetching seller:", err);
+      toast.error("Failed to load seller information");
+    } finally {
+      setLoadingSeller(false);
+    }
   };
 
   const addToCart = async () => {
@@ -283,7 +309,6 @@ export default function ProductDetails() {
                     </>
                   )}
                 </button>
-
                 <button
                   className="border border-[#EB8426] text-[#EB8426] py-3 px-6 rounded-lg hover:bg-[#EB8426] hover:text-white transition w-full sm:w-auto"
                   onClick={buyNow}
@@ -291,6 +316,92 @@ export default function ProductDetails() {
                   Buy Now
                 </button>
               </div>
+              
+              {/* Seller Information Section */}
+              {product?.user && !product.isGuestProduct && (
+                <div className="mt-16 border-t pt-10">
+                  <h2 className="text-2xl font-bold mb-6">Seller Information</h2>
+                  
+                  {loadingSeller ? (
+                    <div className="flex items-center gap-4 p-4 bg-gray-50 rounded-lg">
+                      <div className="w-16 h-16 rounded-full bg-gray-200 animate-pulse"></div>
+                      <div className="space-y-2 flex-1">
+                        <div className="h-4 bg-gray-200 rounded-full w-3/4 animate-pulse"></div>
+                        <div className="h-3 bg-gray-200 rounded-full w-1/2 animate-pulse"></div>
+                      </div>
+                    </div>
+                  ) : seller ? (
+                    <div className="bg-gray-50 rounded-lg p-6">
+                      <div className="flex flex-col md:flex-row gap-6">
+                        <div className="flex-shrink-0">
+                          <div className="w-24 h-24 rounded-full bg-gray-200 flex items-center justify-center overflow-hidden">
+                            {seller.pfp ? (
+                              <img 
+                                src={seller.pfp} 
+                                alt={seller.name}
+                                className="w-full h-full object-cover"
+                              />
+                            ) : (
+                              <FaUser className="text-3xl text-gray-400" />
+                            )}
+                          </div>
+                        </div>
+                        
+                        <div className="flex-1">
+                          <h3 className="text-xl font-semibold flex items-center gap-2">
+                            <FaStore className="text-[#EB8426]" />
+                            {seller.name}
+                          </h3>
+                          <p className="text-gray-600 mt-1">{seller.role === 'seller' ? 'Verified Seller' : 'Individual Seller'}</p>
+                          
+                          <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            {seller.contact && (
+                              <div className="flex items-center gap-2 text-gray-700">
+                                <FaPhone className="text-[#EB8426]" />
+                                <span>{seller.contact}</span>
+                              </div>
+                            )}
+                            
+                            {seller.email && (
+                              <div className="flex items-center gap-2 text-gray-700">
+                                <FaEnvelope className="text-[#EB8426]" />
+                                <span>{seller.email}</span>
+                              </div>
+                            )}
+                            
+                            {(seller.address || seller.city || seller.state) && (
+                              <div className="flex items-start gap-2 text-gray-700">
+                                <FaMapMarkerAlt className="text-[#EB8426] mt-1" />
+                                <span>
+                                  {[seller.address, seller.city, seller.state, seller.country]
+                                    .filter(Boolean)
+                                    .join(', ')}
+                                  {seller.pincode && ` - ${seller.pincode}`}
+                                </span>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                      
+                      {/* Additional seller information or actions */}
+                      <div className="mt-6 pt-6 border-t border-gray-200">
+                        <h4 className="font-medium mb-3">More from this seller</h4>
+                        {seller.products && seller.products.length > 0 ? (
+                          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+                            {/* You could map through seller.products here */}
+                            <p className="text-gray-500">Feature coming soon</p>
+                          </div>
+                        ) : (
+                          <p className="text-gray-500">No other products listed by this seller yet</p>
+                        )}
+                      </div>
+                    </div>
+                  ) : (
+                    <p className="text-gray-500">Seller information not available</p>
+                  )}
+                </div>
+              )}
             </div>
           </div>
         </div>
