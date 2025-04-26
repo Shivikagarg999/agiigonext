@@ -21,6 +21,8 @@ export default function ProductDetails() {
   const [isAddingToCart, setIsAddingToCart] = useState(false);
   const [loadingSeller, setLoadingSeller] = useState(false);
   const [seller, setSeller] = useState(null);
+  const [sellerProducts, setSellerProducts]= useState([]);
+  const [loadingSellerProducts, setLoadingSellerProducts]= useState(false);
 
   useEffect(() => {
     async function fetchProduct() {
@@ -85,7 +87,23 @@ export default function ProductDetails() {
       setLoadingSeller(false);
     }
   };
-
+  const fetchSellerProducts = async (sellerId, excludeProductId) => {
+    setLoadingSellerProducts(true);
+    try {
+      const res = await fetch(
+        `https://api.agiigo.com/api/seller/${sellerId}/products?excludeProductId=${excludeProductId}`
+      );
+      if (!res.ok) throw new Error("Failed to fetch seller's products");
+      
+      const data = await res.json();
+      setSellerProducts(data);
+    } catch (err) {
+      console.error("Error fetching seller's products:", err);
+      toast.error("Failed to load seller's other products");
+    } finally {
+      setLoadingSellerProducts(false);
+    }
+  };
   const addToCart = async () => {
     if (!user) {
       toast.info("Please log in to add items to your cart");
@@ -348,10 +366,15 @@ export default function ProductDetails() {
                         </div>
                         
                         <div className="flex-1">
-                          <h3 className="text-xl font-semibold flex items-center gap-2">
-                            <FaStore className="text-[#EB8426]" />
-                            {seller.name}
-                          </h3>
+<h3 className="text-xl font-semibold flex items-center gap-2">
+  <FaStore className="text-[#EB8426]" />
+  <button 
+    onClick={() => router.push(`/seller/profpublic/${seller._id}`)}
+    className="hover:underline hover:text-[#EB8426] transition"
+  >
+    {seller.name}
+  </button>
+</h3>
                           <p className="text-gray-600 mt-1">{seller.role === 'seller' ? 'Verified Seller' : 'Individual Seller'}</p>
                           
                           <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -361,42 +384,12 @@ export default function ProductDetails() {
                                 <span>{seller.contact}</span>
                               </div>
                             )}
-                            
-                            {seller.email && (
-                              <div className="flex items-center gap-2 text-gray-700">
-                                <FaEnvelope className="text-[#EB8426]" />
-                                <span>{seller.email}</span>
-                              </div>
-                            )}
-                            
-                            {(seller.address || seller.city || seller.state) && (
-                              <div className="flex items-start gap-2 text-gray-700">
-                                <FaMapMarkerAlt className="text-[#EB8426] mt-1" />
-                                <span>
-                                  {[seller.address, seller.city, seller.state, seller.country]
-                                    .filter(Boolean)
-                                    .join(', ')}
-                                  {seller.pincode && ` - ${seller.pincode}`}
-                                </span>
-                              </div>
-                            )}
                           </div>
                         </div>
                       </div>
                       
-                      {/* Additional seller information or actions */}
-                      <div className="mt-6 pt-6 border-t border-gray-200">
-                        <h4 className="font-medium mb-3">More from this seller</h4>
-                        {seller.products && seller.products.length > 0 ? (
-                          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
-                            {/* You could map through seller.products here */}
-                            <p className="text-gray-500">Feature coming soon</p>
-                          </div>
-                        ) : (
-                          <p className="text-gray-500">No other products listed by this seller yet</p>
-                        )}
-                      </div>
-                    </div>
+                </div>
+                    
                   ) : (
                     <p className="text-gray-500">Seller information not available</p>
                   )}
