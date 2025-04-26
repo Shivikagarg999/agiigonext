@@ -3,9 +3,11 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Nav from "../nav/Nav";
 import Footer from "../footer/Footer";
+import { useAuth } from "../../context/AuthContext"; 
 
 export default function LoginForm() {
   const router = useRouter();
+  const { login } = useAuth(); // Access login function from context
   const [form, setForm] = useState({ email: "", password: "" });
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
@@ -32,9 +34,8 @@ export default function LoginForm() {
 
       if (!res.ok) throw new Error(data.message || "Login failed");
 
-      // Store token and user data in localStorage
-      localStorage.setItem("token", data.token);
-      localStorage.setItem("user", JSON.stringify(data.user));
+      // Store token and user data using context
+      login(data.user, data.token);
 
       // Redirect based on role
       if (data.user.role === "buyer") {

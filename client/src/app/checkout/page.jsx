@@ -1,6 +1,8 @@
 "use client";
+
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { useAuth } from "../../context/AuthContext"; // Import the context
 import Nav from "@/app/nav/Nav";
 import Footer from "@/app/footer/Footer";
 import { FaChevronRight, FaLock } from "react-icons/fa";
@@ -8,10 +10,10 @@ import Link from "next/link";
 import { loadStripe } from '@stripe/stripe-js';
 
 export default function CheckoutPage() {
+  const { user } = useAuth(); // Use the user from context
   const [cart, setCart] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [user, setUser] = useState(null);
   const [formData, setFormData] = useState({
     firstName: '',
     lastName: '',
@@ -25,56 +27,22 @@ export default function CheckoutPage() {
     paymentMethod: 'Cash on Delivery',
     saveInfo: false
   });
+  
   const router = useRouter();
 
   useEffect(() => {
-    const checkAuth = () => {
-      const token = localStorage.getItem("token");
-      const userData = localStorage.getItem("user");
-
-      if (!token || !userData) {
-        const cookieToken = document.cookie.split('; ').find(row => row.startsWith('token='))?.split('=')[1];
-        const cookieUser = document.cookie.split('; ').find(row => row.startsWith('user='))?.split('=')[1];
-        
-        if (cookieToken && cookieUser) {
-          try {
-            const parsedUser = JSON.parse(decodeURIComponent(cookieUser));
-            setUser(parsedUser);
-            setFormData(prev => ({
-              ...prev,
-              firstName: parsedUser.firstName || '',
-              lastName: parsedUser.lastName || '',
-              email: parsedUser.email || ''
-            }));
-            fetchCartData(parsedUser._id, cookieToken);
-            return;
-          } catch (e) {
-            console.error("Error parsing cookie user data:", e);
-          }
-        }
-        router.push("/login");
-        return;
-      }
-
-      try {
-        const parsedUser = JSON.parse(userData);
-        setUser(parsedUser);
-        setFormData(prev => ({
-          ...prev,
-          firstName: parsedUser.firstName || '',
-          lastName: parsedUser.lastName || '',
-          email: parsedUser.email || ''
-        }));
-        fetchCartData(parsedUser._id, token);
-      } catch (error) {
-        console.error("Error parsing user data:", error);
-        clearAuthData();
-        router.push("/login");
-      }
-    };
-
-    checkAuth();
-  }, [router]);
+    if (!user) {
+      router.push("/login"); // Redirect if user is not logged in
+    } else {
+      setFormData(prev => ({
+        ...prev,
+        firstName: user.firstName || '',
+        lastName: user.lastName || '',
+        email: user.email || ''
+      }));
+      fetchCartData(user._id);
+    }
+  }, [user, router]);
 
   const clearAuthData = () => {
     localStorage.removeItem("token");

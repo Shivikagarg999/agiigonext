@@ -21,9 +21,9 @@ export default function Footer() {
           
           <div className="flex space-x-3">
             {[
-              { icon: FaFacebookF, link: "https://facebook.com" },
+              { icon: FaFacebookF, link: "https://www.facebook.com/people/Agiigocom/61574947863550/#" },
               { icon: FaTwitter, link: "https://twitter.com" },
-              { icon: FaInstagram, link: "https://instagram.com" }
+              { icon: FaInstagram, link: "https://www.instagram.com/agiigo.ae/#" }
             ].map((social, index) => (
               <a 
                 key={index} 
@@ -38,22 +38,26 @@ export default function Footer() {
           </div>
         </div>
 
-        {/* Navigation Section */}
-        <div className="space-y-4">
-          <h3 className="text-lg font-semibold text-gray-900">Navigation</h3>
-          <ul className="space-y-2.5">
-            {["Home", "Shop", "About", "Contact"].map((item, index) => (
-              <li key={index}>
-                <a 
-                  href="#" 
-                  className="text-gray-600 hover:text-[#EB8426] text-sm transition-colors duration-200"
-                >
-                  {item}
-                </a>
-              </li>
-            ))}
-          </ul>
-        </div>
+       {/* Navigation Section */}
+<div className="space-y-4">
+  <h3 className="text-lg font-semibold text-gray-900">Navigation</h3>
+  <ul className="space-y-2.5">
+    {["Home", "Shop", "About"].map((item, index) => {
+      const path = item === "Home" ? "/" : `/${item.toLowerCase()}`;
+      return (
+        <li key={index}>
+          <a 
+            href={path}
+            className="text-gray-600 hover:text-[#EB8426] text-sm transition-colors duration-200"
+          >
+            {item}
+          </a>
+        </li>
+      );
+    })}
+  </ul>
+</div>
+
 
         {/* Account Section */}
         <div className="space-y-4">
