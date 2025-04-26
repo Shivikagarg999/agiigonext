@@ -188,7 +188,7 @@ export default function CheckoutPage() {
         }
 
         const order = await orderRes.json();
-        const stripe = await loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY);
+        const stripe = await loadStripe("pk_live_51KuK4cBh8DMWVmVh2OTAqSZy4yE0zdRbowRdp3x7W56XVIMbvNcjqMR78O3Y73M5nlx00MrMf7ySHueMZfYX85l600RmDG1scS");
         
         const paymentResponse = await fetch("https://api.agiigo.com/api/payment/create-intent", {
           method: "POST",
