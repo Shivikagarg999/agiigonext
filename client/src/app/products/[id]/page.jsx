@@ -70,23 +70,28 @@ export default function ProductDetails() {
   };
 
   const fetchSellerDetails = async (sellerId) => {
-    setLoadingSeller(true);
-    try {
-      // Ensure sellerId is a string/number, not an object
-      const id = typeof sellerId === 'object' ? sellerId._id || sellerId.id : sellerId;
-      
-      const res = await fetch(`https://api.agiigo.com/api/seller/${id}`);
-      if (!res.ok) throw new Error("Failed to fetch seller details");
-      
-      const data = await res.json();
-      setSeller(data);
-    } catch (err) {
-      console.error("Error fetching seller:", err);
-      toast.error("Failed to load seller information");
-    } finally {
-      setLoadingSeller(false);
+  setLoadingSeller(true);
+  try {
+    // Handle both string and object sellerId
+    const id = sellerId._id || sellerId.id || sellerId;
+    
+    const res = await fetch(`https://api.agiigo.com/api/seller/${id}`);
+    if (!res.ok) {
+      const errorData = await res.json();
+      throw new Error(errorData.message || "Failed to fetch seller details");
     }
-  };
+    
+    const data = await res.json();
+    // Check if the response has a 'seller' property or is the seller object directly
+    setSeller(data.seller || data);
+  } catch (err) {
+    console.error("Error fetching seller:", err);
+    setError(err.message); // Make sure to set the error state
+    toast.error(err.message || "Failed to load seller information");
+  } finally {
+    setLoadingSeller(false);
+  }
+};
   const fetchSellerProducts = async (sellerId, excludeProductId) => {
     setLoadingSellerProducts(true);
     try {
@@ -384,6 +389,8 @@ export default function ProductDetails() {
                                 <span>{seller.contact}</span>
                               </div>
                             )}
+                            
+                          
                           </div>
                         </div>
                       </div>
