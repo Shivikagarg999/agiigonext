@@ -20,7 +20,7 @@ function ProductsContent() {
   const [error, setError] = useState(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [showCategories, setShowCategories] = useState(false);
-  const [currency, setCurrency] = useState("USD");
+  const [currency, setCurrency] = useState(null);
   const [showCurrencyDropdown, setShowCurrencyDropdown] = useState(false);
 
   const searchParams = useSearchParams();
@@ -33,6 +33,18 @@ function ProductsContent() {
   };
 
   const generateRandomDiscount = () => Math.floor(Math.random() * 50) + 10;
+
+  const formatPrice = (price, currencyCode) => {
+    if (!currencyCode) {
+      return price.toFixed(2);
+    }
+    return new Intl.NumberFormat(undefined, {
+      style: 'currency',
+      currency: currencyCode,
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
+    }).format(price);
+  };
 
   useEffect(() => {
     async function fetchProducts() {
@@ -59,10 +71,9 @@ function ProductsContent() {
         const uniqueCategories = [...new Set(data.map((product) => product.category))];
         setCategories(uniqueCategories);
 
-        const usdProducts = data.filter(p => p.priceCurrency === "USD");
-        const highestUSDPrice = usdProducts.length > 0 ? Math.max(...usdProducts.map(p => p.price)) : 1000;
-        setMaxPrice(highestUSDPrice);
-        setPriceRange(highestUSDPrice);
+        const highestPrice = data.length > 0 ? Math.max(...data.map(p => p.price)) : 1000;
+        setMaxPrice(highestPrice);
+        setPriceRange(highestPrice);
       } catch (err) {
         setError(err.message);
       } finally {
@@ -80,23 +91,24 @@ function ProductsContent() {
   useEffect(() => {
     let filtered = products;
 
-    // First filter by currency
-    filtered = filtered.filter(product => product.priceCurrency === currency);
+    if (currency) {
+      filtered = filtered.filter(product => product.priceCurrency === currency);
+    }
 
-    // Then update max price for the selected currency
-    const currencyProducts = products.filter(p => p.priceCurrency === currency);
-    const highestPrice = currencyProducts.length > 0 ? Math.max(...currencyProducts.map(p => p.price)) : 1000;
+    const currencyProducts = currency ? 
+      products.filter(p => p.priceCurrency === currency) : 
+      products;
+    const highestPrice = currencyProducts.length > 0 ? 
+      Math.max(...currencyProducts.map(p => p.price)) : 
+      1000;
     setMaxPrice(highestPrice);
     
-    // Then filter by category if selected
     if (selectedCategory) {
       filtered = filtered.filter((product) => product.category === selectedCategory);
     }
 
-    // Then filter by price range
     filtered = filtered.filter((product) => product.price <= priceRange);
     
-    // Finally filter by search query
     if (searchQuery) {
       filtered = filtered.filter((product) =>
         product.name.toLowerCase().includes(searchQuery.toLowerCase())
@@ -128,9 +140,12 @@ function ProductsContent() {
     setCurrency(newCurrency);
     setShowCurrencyDropdown(false);
     
-    // Reset price range to max for the new currency
-    const currencyProducts = products.filter(p => p.priceCurrency === newCurrency);
-    const highestPrice = currencyProducts.length > 0 ? Math.max(...currencyProducts.map(p => p.price)) : 1000;
+    const currencyProducts = newCurrency ? 
+      products.filter(p => p.priceCurrency === newCurrency) : 
+      products;
+    const highestPrice = currencyProducts.length > 0 ? 
+      Math.max(...currencyProducts.map(p => p.price)) : 
+      1000;
     setPriceRange(highestPrice);
   };
 
@@ -138,36 +153,82 @@ function ProductsContent() {
     <div className="bg-white">
       <TopBar />
       <Nav />
-      <div className="container mt-8 bg-white text-black px-6 py-10">
-        <div className="relative w-full h-auto max-h-[96vh] flex items-center justify-center overflow-hidden rounded-lg">
-          <img src="/images/prod.jpeg" alt="Shop Banner" className="w-full h-auto object-cover" />
+      <div className="container mt-8 bg-white text-black px-4 sm:px-6 py-8 sm:py-10">
+        <div className="relative w-full h-auto max-h-[96vh] flex items-center justify-center overflow-hidden rounded-xl shadow-md">
+          <img 
+            src="/images/prod.jpeg" 
+            alt="Shop Banner" 
+            className="w-full h-auto object-cover transition-transform duration-500 hover:scale-105" 
+          />
         </div>
-      <BrowseByCategory/>
-        <div className="mt-10 flex flex-col md:flex-row gap-8">
-          <aside className="w-full md:w-1/4 bg-white shadow rounded-lg p-6">
-            <div className="flex justify-between items-center mb-4">
-              <h2 className="text-xl font-bold">Filters</h2>
+        
+        <BrowseByCategory/>
+        
+        <div className="mt-8 flex flex-col md:flex-row gap-6">
+          <aside className="w-full md:w-1/4 bg-white shadow-lg rounded-xl p-5 h-fit sticky top-4">
+            <div className="flex justify-between items-center mb-4 pb-2 border-b border-gray-100">
+              <h2 className="text-xl font-bold text-gray-800">Filters</h2>
               <div className="relative">
                 <button 
-                  className="flex items-center gap-2 px-3 py-1 border rounded-md text-sm"
+                  className="flex items-center gap-2 px-3 py-2 border border-gray-200 rounded-lg text-sm font-medium bg-white hover:bg-gray-50 transition-colors shadow-sm"
                   onClick={() => setShowCurrencyDropdown(!showCurrencyDropdown)}
                 >
-                  {currency}
-                  {showCurrencyDropdown ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+                  <span className="text-gray-700">{currency || "All Currencies"}</span>
+                  {showCurrencyDropdown ? (
+                    <ChevronUp size={16} className="text-gray-500" />
+                  ) : (
+                    <ChevronDown size={16} className="text-gray-500" />
+                  )}
                 </button>
+                
                 {showCurrencyDropdown && (
-                  <div className="absolute right-0 mt-1 w-20 bg-white border rounded-md shadow-lg z-10">
+                  <div className="absolute right-0 mt-2 w-40 bg-white border border-gray-200 rounded-lg shadow-lg z-10 overflow-hidden transition-all duration-200 origin-top">
                     <button 
-                      className={`w-full text-left px-3 py-2 text-sm ${currency === 'USD' ? 'bg-gray-100 font-medium' : 'hover:bg-gray-50'}`}
+                      className={`w-full text-left px-4 py-2.5 text-sm flex items-center transition-colors ${
+                        !currency 
+                          ? 'bg-orange-50 text-orange-600 font-medium' 
+                          : 'text-gray-700 hover:bg-gray-50'
+                      }`}
+                      onClick={() => handleCurrencyChange(null)}
+                    >
+                      <span>All Currencies</span>
+                      {!currency && (
+                        <svg className="ml-2 h-4 w-4 text-orange-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                        </svg>
+                      )}
+                    </button>
+                    
+                    <button 
+                      className={`w-full text-left px-4 py-2.5 text-sm flex items-center transition-colors ${
+                        currency === 'USD' 
+                          ? 'bg-orange-50 text-orange-600 font-medium' 
+                          : 'text-gray-700 hover:bg-gray-50'
+                      }`}
                       onClick={() => handleCurrencyChange('USD')}
                     >
-                      USD
+                      <span>USD - US Dollar</span>
+                      {currency === 'USD' && (
+                        <svg className="ml-2 h-4 w-4 text-orange-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                        </svg>
+                      )}
                     </button>
+                    
                     <button 
-                      className={`w-full text-left px-3 py-2 text-sm ${currency === 'AED' ? 'bg-gray-100 font-medium' : 'hover:bg-gray-50'}`}
+                      className={`w-full text-left px-4 py-2.5 text-sm flex items-center transition-colors ${
+                        currency === 'AED' 
+                          ? 'bg-orange-50 text-orange-600 font-medium' 
+                          : 'text-gray-700 hover:bg-gray-50'
+                      }`}
                       onClick={() => handleCurrencyChange('AED')}
                     >
-                      AED
+                      <span>AED - UAE Dirham</span>
+                      {currency === 'AED' && (
+                        <svg className="ml-2 h-4 w-4 text-orange-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                        </svg>
+                      )}
                     </button>
                   </div>
                 )}
@@ -175,7 +236,7 @@ function ProductsContent() {
             </div>
 
             <button 
-              className="w-full flex items-center justify-between bg-gray-100 text-gray-700 py-2 px-4 rounded-md mb-4 hover:bg-gray-200 transition"
+              className="w-full flex items-center justify-between bg-gray-50 text-gray-700 py-2.5 px-4 rounded-lg mb-4 hover:bg-gray-100 transition-colors border border-gray-200"
               onClick={() => setShowCategories(!showCategories)}
             >
               <span className="font-medium">Categories</span>
@@ -183,13 +244,13 @@ function ProductsContent() {
             </button>
 
             {showCategories && (
-              <ul className="space-y-2">
+              <ul className="space-y-2 mb-6 animate-fadeIn">
                 <li>
                   <button
-                    className={`w-full text-left px-4 py-2 rounded-md border transition ${
+                    className={`w-full text-left px-4 py-2 rounded-lg transition-all duration-200 ${
                       !selectedCategory
-                        ? "border-[#EB8426] text-[#EB8426] font-semibold"
-                        : "border-transparent hover:border-gray-300"
+                        ? "bg-orange-50 text-[#EB8426] font-semibold border border-orange-200"
+                        : "hover:bg-gray-50"
                     }`}
                     onClick={() => setSelectedCategory(null)}
                   >
@@ -199,10 +260,10 @@ function ProductsContent() {
                 {categories.map((category) => (
                   <li key={category}>
                     <button
-                      className={`w-full text-left px-4 py-2 rounded-md border transition ${
+                      className={`w-full text-left px-4 py-2 rounded-lg transition-all duration-200 ${
                         selectedCategory === category
-                          ? "border-[#EB8426] text-[#EB8426] font-semibold"
-                          : "border-transparent hover:border-gray-300"
+                          ? "bg-orange-50 text-[#EB8426] font-semibold border border-orange-200"
+                          : "hover:bg-gray-50"
                       }`}
                       onClick={() => setSelectedCategory(category)}
                     >
@@ -213,49 +274,36 @@ function ProductsContent() {
               </ul>
             )}
 
-            <h3 className="font-semibold mt-6 mb-2">Price Range ({currency})</h3>
-            <div className="space-y-4">
-              <input
-                type="range"
-                min="0"
-                max={maxPrice}
-                value={priceRange}
-                onChange={(e) => setPriceRange(Number(e.target.value))}
-                className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-[#EB8426]"
-              />
-              <div className="flex justify-between items-center">
-                <span className="text-gray-600">{new Intl.NumberFormat(undefined, {
-                  style: 'currency',
-                  currency: currency,
-                  minimumFractionDigits: 0,
-                  maximumFractionDigits: 0
-                }).format(0)}</span>
-                <div className="bg-gray-100 px-3 py-1 rounded-md text-sm font-medium">
-                  Up to {new Intl.NumberFormat(undefined, {
-                    style: 'currency',
-                    currency: currency,
-                    minimumFractionDigits: 2,
-                    maximumFractionDigits: 2
-                  }).format(priceRange)}
+            <div className="pt-4 border-t border-gray-100">
+              <h3 className="font-semibold text-gray-800 mb-3">Price Range {currency && `(${currency})`}</h3>
+              <div className="space-y-4">
+                <input
+                  type="range"
+                  min="0"
+                  max={maxPrice}
+                  value={priceRange}
+                  onChange={(e) => setPriceRange(Number(e.target.value))}
+                  className="w-full h-2 bg-gray-200 rounded-full appearance-none cursor-pointer accent-[#EB8426]"
+                />
+                <div className="flex justify-between items-center text-sm">
+                  <span className="text-gray-600">{currency ? formatPrice(0, currency) : "0.00"}</span>
+                  <div className="bg-gray-50 px-3 py-1 rounded-md font-medium border border-gray-200">
+                    Up to {currency ? formatPrice(priceRange, currency) : priceRange.toFixed(2)}
+                  </div>
+                  <span className="text-gray-600">{currency ? formatPrice(maxPrice, currency) : maxPrice.toFixed(2)}</span>
                 </div>
-                <span className="text-gray-600">{new Intl.NumberFormat(undefined, {
-                  style: 'currency',
-                  currency: currency,
-                  minimumFractionDigits: 0,
-                  maximumFractionDigits: 0
-                }).format(maxPrice)}</span>
               </div>
             </div>
           </aside>
 
           <div className="flex-1">
             <div className="mb-6 flex justify-center">
-              <div className="relative w-full max-w-md">
+              <div className="relative w-full max-w-lg">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500" size={20} />
                 <input
                   type="text"
                   placeholder="Search products..."
-                  className="border rounded-lg px-10 py-2 w-full focus:outline-none focus:ring-2 focus:ring-[#EB8426]"
+                  className="border rounded-lg px-10 py-2.5 w-full focus:outline-none focus:ring-2 focus:ring-[#EB8426] focus:border-transparent transition-all"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                 />
@@ -263,64 +311,59 @@ function ProductsContent() {
             </div>
 
             {loading ? (
-              <p className="text-center text-gray-500">Loading products...</p>
+              <div className="flex justify-center items-center h-64">
+                <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-orange-500"></div>
+              </div>
             ) : error ? (
-              <p className="text-center text-red-500">{error}</p>
+              <div className="bg-red-50 border border-red-200 text-red-700 p-4 rounded-lg text-center">
+                {error}
+              </div>
             ) : filteredProducts.length === 0 ? (
-              <p className="text-center text-gray-500">No products found for {currency} currency.</p>
+              <div className="bg-gray-50 border border-gray-200 text-gray-700 p-6 rounded-xl text-center">
+                <p className="text-lg font-medium">No products found {currency && `for ${currency} currency`}</p>
+                <p className="mt-2 text-sm">Try adjusting your filters or search query</p>
+              </div>
             ) : (
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-1 sm:gap-2">
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 sm:gap-4">
                 {filteredProducts.map((product) => (
                   <a 
                     key={product.id || product._id} 
                     href={`/products/${product.id || product._id}`} 
-                    className="bg-white rounded-sm overflow-hidden hover:shadow-sm transition-all"
+                    className="bg-white rounded-lg overflow-hidden hover:shadow-md transition-all duration-300 border border-gray-100 hover:border-orange-100 group"
                   >
-                    <div className="aspect-square w-full bg-gray-100 relative">
+                    <div className="aspect-square w-full bg-gray-50 relative overflow-hidden">
                       <img
                         src={product.image}
                         alt={product.name}
-                        className="w-full h-full object-cover"
+                        className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                        loading="lazy"
                       />
                       {product.discount > 30 && (
-                        <div className="absolute top-1 left-1 bg-red-600 text-white text-[12px] font-bold px-1 rounded">
-                          SALE
+                        <div className="absolute top-2 left-2 bg-red-600 text-white text-xs font-bold px-2 py-1 rounded-md shadow-sm">
+                          {product.discount}% OFF
                         </div>
                       )}
                     </div>
 
                     <div className="p-3">
-                      <div className="flex items-center gap-1">
-                        <p className="text-md font-bold text-red-600">
-                          {new Intl.NumberFormat(undefined, {
-                            style: 'currency',
-                            currency: product.priceCurrency,
-                            minimumFractionDigits: 2,
-                            maximumFractionDigits: 2
-                          }).format(product.price)}
+                      <div className="flex items-center gap-1 mb-1">
+                        <p className="text-sm font-bold text-red-600">
+                          {formatPrice(product.price, product.priceCurrency)}
                         </p>
                         {product.originalPrice && (
-                          <p className="text-[14px] text-gray-500 line-through">
-                            {new Intl.NumberFormat(undefined, {
-                              style: 'currency',
-                              currency: product.priceCurrency,
-                              minimumFractionDigits: 2,
-                              maximumFractionDigits: 2
-                            }).format(product.originalPrice)}
+                          <p className="text-xs text-gray-500 line-through">
+                            {formatPrice(product.originalPrice, product.priceCurrency)}
                           </p>
                         )}
-                        <span className="text-[13px] text-red-600">
-                          -{product.discount}%
-                        </span>
                       </div>
                       
-                      <h3 className="text-[15px] font-bold text-gray-900 mt-[2px] line-clamp-2 leading-tight h-[32px]">
+                      <h3 className="text-sm font-semibold text-gray-900 line-clamp-2 leading-tight min-h-[40px] group-hover:text-[#EB8426] transition-colors">
                         {product.name}
                       </h3>
                       
-                      <div className="mt-[2px] flex items-center">
+                      <div className="mt-2 flex items-center">
                         <StarRating rating={product.rating} />
-                        <span className="ml-1 text-[13px] text-gray-500">
+                        <span className="ml-1 text-xs text-gray-500">
                           ({product.reviewCount})
                         </span>
                       </div>
@@ -339,7 +382,11 @@ function ProductsContent() {
 
 export default function ProductsPage() {
   return (
-    <Suspense fallback={<p>Loading...</p>}>
+    <Suspense fallback={
+      <div className="flex justify-center items-center h-screen">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-orange-500"></div>
+      </div>
+    }>
       <ProductsContent />
     </Suspense>
   );
