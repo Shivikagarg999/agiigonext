@@ -5,9 +5,9 @@ const cartSchema = new mongoose.Schema({
     items: [{
         productId: { type: mongoose.Schema.Types.ObjectId, ref: 'Product', required: true },
         quantity: { type: Number, default: 1 },
-        priceAtTimeOfAddition: { type: Number, required: true } // Store price to prevent price fluctuation issues
+        priceAtTimeOfAddition: { type: Number, required: true } 
     }],
-    totalPrice: { type: Number, default: 0 }, // Store the total price for quick access
+    totalPrice: { type: Number, default: 0 }, 
     updatedAt: { type: Date, default: Date.now }
 }, { timestamps: true });
 

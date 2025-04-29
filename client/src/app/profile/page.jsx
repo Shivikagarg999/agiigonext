@@ -1,12 +1,11 @@
 "use client";
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { User, ShoppingBag, Shield, LogOut, ArrowLeft, Save, Edit, X, Camera } from 'lucide-react';
-
-import { useAuth } from "../../context/AuthContext";
+import { User, ShoppingBag, Shield, LogOut, ArrowLeft, Save, Edit, X } from 'lucide-react';
 
 export default function ProfilePage() {
-  const { user } = useAuth();
+  const [user, setUser] = useState(null);
+  const [orders, setOrders] = useState([]);
   const [activeTab, setActiveTab] = useState('profile');
   const [isLoading, setIsLoading] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
@@ -28,28 +27,54 @@ export default function ProfilePage() {
   const router = useRouter();
 
   useEffect(() => {
-    if (user !== null) {
-      setIsLoading(false);
-      setFormData({
-        name: user.name || '',
-        email: user.email || '',
-        contact: user.contact || '',
-        address: user.address || '',
-        state: user.state || '',
-        city: user.city || '',
-        country: user.country || '',
-        pincode: user.pincode?.toString() || ''
-      });
-      if (user.pfp) {
-        setImagePreview(user.pfp);
-      }
-    } else {
-      const timer = setTimeout(() => {
-        setIsLoading(false);
-      }, 5000);
-      return () => clearTimeout(timer);
+    const token = localStorage.getItem('token');
+    const userData = localStorage.getItem('user');
+    
+    if (!token || !userData) {
+      router.push('/login');
+      return;
     }
-  }, [user]);
+  
+    try {
+      const parsedUser = JSON.parse(userData);
+      setUser(parsedUser);
+      setImagePreview(parsedUser.pfp || null);
+      setFormData({
+        name: parsedUser.name || '',
+        email: parsedUser.email || '',
+        contact: parsedUser.contact || '',
+        address: parsedUser.address || '',
+        state: parsedUser.state || '',
+        city: parsedUser.city || '',
+        country: parsedUser.country || '',
+        pincode: parsedUser.pincode?.toString() || ''
+      });
+  
+      // Fetch user's orders
+      const fetchOrders = async () => {
+        try {
+          const response = await fetch(`https://api.agiigo.com/api/order/user/${parsedUser._id}`, {
+            headers: {
+              'Authorization': `Bearer ${token}`
+            }
+          });
+          
+          if (response.ok) {
+            const ordersData = await response.json();
+            setOrders(ordersData);
+          }
+        } catch (error) {
+          console.error('Error fetching orders:', error);
+        }
+      };
+  
+      fetchOrders();
+      setIsLoading(false);
+    } catch (error) {
+      console.error('Error parsing user data:', error);
+      router.push('/login');
+    }
+  }, [router]);
 
   const handleLogout = () => {
     localStorage.removeItem('token');
@@ -68,10 +93,6 @@ export default function ProfilePage() {
   const handleImageChange = (e) => {
     const file = e.target.files[0];
     if (file) {
-      if (file.size > 2 * 1024 * 1024) {
-        setError('Image size should be less than 2MB');
-        return;
-      }
       setImageFile(file);
       const reader = new FileReader();
       reader.onload = () => setImagePreview(reader.result);
@@ -79,41 +100,10 @@ export default function ProfilePage() {
     }
   };
 
-  const validateForm = () => {
-    const errors = {};
-    
-    if (!formData.name.trim()) {
-      errors.name = 'Name is required';
-    }
-    
-    if (!formData.email.trim()) {
-      errors.email = 'Email is required';
-    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
-      errors.email = 'Invalid email address';
-    }
-    
-    if (formData.contact && !/^[\+]?[(]?[0-9]{3}[)]?[-\s\.]?[0-9]{3}[-\s\.]?[0-9]{4,6}$/.test(formData.contact)) {
-      errors.contact = 'Invalid phone number';
-    }
-    
-    if (formData.pincode && !/^\d+$/.test(formData.pincode)) {
-      errors.pincode = 'ZIP code must be numeric';
-    }
-    
-    return errors;
-  };
-
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError(null);
     setSuccess(null);
-    
-    const errors = validateForm();
-    if (Object.keys(errors).length > 0) {
-      setError('Please correct the errors in the form');
-      return;
-    }
-    
     setIsUpdating(true);
 
     try {
@@ -126,15 +116,14 @@ export default function ProfilePage() {
 
       const formDataToSend = new FormData();
       
-      formDataToSend.append('name', formData.name);
-      formDataToSend.append('email', formData.email);
-      if (formData.contact) formDataToSend.append('contact', formData.contact);
-      if (formData.address) formDataToSend.append('address', formData.address);
-      if (formData.state) formDataToSend.append('state', formData.state);
-      if (formData.city) formDataToSend.append('city', formData.city);
-      if (formData.country) formDataToSend.append('country', formData.country);
-      if (formData.pincode) formDataToSend.append('pincode', formData.pincode);
+      // Append all form fields
+      Object.keys(formData).forEach(key => {
+        // Convert pincode to number if needed
+        const value = key === 'pincode' ? parseInt(formData[key]) || 0 : formData[key];
+        formDataToSend.append(key, value);
+      });
       
+      // Append image file if changed
       if (imageFile) {
         formDataToSend.append('pfp', imageFile);
       }
@@ -147,21 +136,15 @@ export default function ProfilePage() {
         body: formDataToSend
       });
 
-      if (!res.ok) {
-        const errorData = await res.json();
-        throw new Error(errorData.message || 'Failed to update profile');
-      }
-
       const responseData = await res.json();
 
-      const updatedUser = {
-        ...userData,
-        ...responseData,
-        pfp: responseData.pfp || userData.pfp
-      };
+      if (!res.ok) {
+        throw new Error(responseData.message || 'Failed to update profile');
+      }
 
-      localStorage.setItem('user', JSON.stringify(updatedUser));
-      setImagePreview(responseData.pfp || userData.pfp || null);
+      // Update all states with fresh data
+      setUser(responseData);
+      setImagePreview(responseData.pfp || null);
       setFormData({
         name: responseData.name || '',
         email: responseData.email || '',
@@ -170,9 +153,10 @@ export default function ProfilePage() {
         state: responseData.state || '',
         city: responseData.city || '',
         country: responseData.country || '',
-        pincode: responseData.pincode?.toString() || ''
+        pincode: responseData.pincode?.toString() || '' // Convert to string for input
       });
       
+      localStorage.setItem('user', JSON.stringify(responseData));
       setSuccess('Profile updated successfully!');
       setIsEditing(false);
       setImageFile(null);
@@ -202,7 +186,6 @@ export default function ProfilePage() {
 
   return (
     <div className="min-h-screen bg-gray-50 text-black">
-      
       {/* Header */}
       <div className="bg-white shadow-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -258,6 +241,14 @@ export default function ProfilePage() {
                 </button>
                 
                 <button
+                  onClick={() => setActiveTab('orders')}
+                  className={`w-full flex items-center space-x-3 px-3 py-3 rounded-md text-sm font-medium ${activeTab === 'orders' ? 'bg-orange-50 text-orange-600' : 'text-gray-700 hover:bg-gray-100'}`}
+                >
+                  <ShoppingBag className="h-5 w-5" />
+                  <span>My Orders</span>
+                </button>
+                
+                <button
                   onClick={() => setActiveTab('security')}
                   className={`w-full flex items-center space-x-3 px-3 py-3 rounded-md text-sm font-medium ${activeTab === 'security' ? 'bg-orange-50 text-orange-600' : 'text-gray-700 hover:bg-gray-100'}`}
                 >
@@ -278,9 +269,8 @@ export default function ProfilePage() {
 
           {/* Main Panel */}
           <div className="flex-1">
-            {console.log(user)}
             {/* Profile Tab */}
-            {activeTab === 'profile' && user && (
+            {activeTab === 'profile' && (
               <div className="bg-white rounded-lg shadow-sm overflow-hidden">
                 <div className="p-6 border-b border-gray-200 flex justify-between items-center">
                   <h2 className="text-lg font-semibold">Personal Information</h2>
@@ -298,6 +288,17 @@ export default function ProfilePage() {
                         setIsEditing(false);
                         setImageFile(null);
                         setImagePreview(user.pfp || null);
+                        // Reset form data to current user data
+                        setFormData({
+                          name: user.name || '',
+                          email: user.email || '',
+                          contact: user.contact || '',
+                          address: user.address || '',
+                          state: user.state || '',
+                          city: user.city || '',
+                          country: user.country || '',
+                          pincode: user.pincode?.toString() || ''
+                        });
                       }}
                       className="flex items-center space-x-1 text-gray-500 hover:text-gray-600"
                     >
@@ -307,7 +308,6 @@ export default function ProfilePage() {
                   )}
                 </div>
 
-                {/* Error/Success Messages */}
                 {error && (
                   <div className="mx-6 mt-4 p-3 bg-red-50 text-red-600 rounded-md text-sm">
                     {error}
@@ -321,17 +321,18 @@ export default function ProfilePage() {
                 )}
 
                 <form onSubmit={handleSubmit} className="p-6">
-                  {/* Profile Picture */}
+                  {/* Profile Picture Upload */}
                   <div className="flex flex-col items-center mb-8">
-                    <div className="relative mb-4 group">
-                      <img 
-                        src={imagePreview || user.pfp} 
-                        alt="Profile" 
-                        className="w-32 h-32 rounded-full object-cover border-4 border-white shadow-md"
-                      />
-                      {isEditing && (
-                        <div className="absolute inset-0 rounded-full bg-black bg-opacity-30 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                          <Camera className="h-8 w-8 text-white" />
+                    <div className="relative mb-4">
+                      {imagePreview ? (
+                        <img 
+                          src={imagePreview} 
+                          alt="Profile" 
+                          className="w-32 h-32 rounded-full object-cover border-4 border-white shadow-md"
+                        />
+                      ) : (
+                        <div className="w-32 h-32 rounded-full bg-gray-300 flex items-center justify-center border-4 border-white shadow-md">
+                          <User className="h-16 w-16 text-gray-500" />
                         </div>
                       )}
                     </div>
@@ -341,163 +342,112 @@ export default function ProfilePage() {
                         <label className="block text-sm font-medium text-gray-700 mb-1 text-center">
                           Change Profile Photo
                         </label>
-                        <div className="flex items-center justify-center gap-2">
-                          <label className="cursor-pointer">
-                            <span className="px-4 py-2 bg-orange-500 text-white rounded-md hover:bg-orange-600 text-sm">
-                              Upload Photo
-                            </span>
-                            <input
-                              type="file"
-                              accept="image/*"
-                              onChange={handleImageChange}
-                              className="hidden"
-                            />
-                          </label>
-                          {imagePreview && imagePreview !== user.pfp && (
-                            <button
-                              type="button"
-                              onClick={() => {
-                                setImageFile(null);
-                                setImagePreview(user.pfp || null);
-                              }}
-                              className="px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 text-sm"
-                            >
-                              Remove
-                            </button>
-                          )}
-                        </div>
-                        <p className="mt-1 text-xs text-gray-500 text-center">
-                          JPG, GIF or PNG. Max size 2MB
-                        </p>
+                        <input
+                          type="file"
+                          accept="image/*"
+                          onChange={handleImageChange}
+                          className="block w-full text-sm text-gray-500
+                            file:mr-4 file:py-2 file:px-4
+                            file:rounded-md file:border-0
+                            file:text-sm file:font-semibold
+                            file:bg-orange-50 file:text-orange-700
+                            hover:file:bg-orange-100"
+                        />
                       </div>
                     )}
                   </div>
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    {/* View Mode (non-editing) */}
-                    {!isEditing ? (
-                      <>
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">Full Name</label>
-                          <p className="px-3 py-2 bg-gray-50 rounded-md">{user.name || 'Not provided'}</p>
-                        </div>
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
-                          <p className="px-3 py-2 bg-gray-50 rounded-md">{user.email}</p>
-                        </div>
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">Phone Number</label>
-                          <p className="px-3 py-2 bg-gray-50 rounded-md">{user.contact || 'Not provided'}</p>
-                        </div>
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">Address</label>
-                          <p className="px-3 py-2 bg-gray-50 rounded-md">{user.address || 'Not provided'}</p>
-                        </div>
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">City</label>
-                          <p className="px-3 py-2 bg-gray-50 rounded-md">{user.city || 'Not provided'}</p>
-                        </div>
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">State</label>
-                          <p className="px-3 py-2 bg-gray-50 rounded-md">{user.state || 'Not provided'}</p>
-                        </div>
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">Country</label>
-                          <p className="px-3 py-2 bg-gray-50 rounded-md">{user.country || 'Not provided'}</p>
-                        </div>
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">ZIP Code</label>
-                          <p className="px-3 py-2 bg-gray-50 rounded-md">{user.pincode || 'Not provided'}</p>
-                        </div>
-                      </>
-                    ) : (
-                      <>
-                        {/* Edit Mode (form inputs) */}
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">Full Name</label>
-                          <input
-                            type="text"
-                            name="name"
-                            value={formData.name}
-                            onChange={handleInputChange}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
-                            required
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
-                          <input
-                            type="email"
-                            name="email"
-                            value={formData.email}
-                            onChange={handleInputChange}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
-                            required
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">Phone Number</label>
-                          <input
-                            type="tel"
-                            name="contact"
-                            value={formData.contact}
-                            onChange={handleInputChange}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
-                            placeholder="+91 9876543210"
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">Address</label>
-                          <input
-                            type="text"
-                            name="address"
-                            value={formData.address}
-                            onChange={handleInputChange}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">City</label>
-                          <input
-                            type="text"
-                            name="city"
-                            value={formData.city}
-                            onChange={handleInputChange}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">State</label>
-                          <input
-                            type="text"
-                            name="state"
-                            value={formData.state}
-                            onChange={handleInputChange}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">Country</label>
-                          <input
-                            type="text"
-                            name="country"
-                            value={formData.country}
-                            onChange={handleInputChange}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">ZIP Code</label>
-                          <input
-                            type="text"
-                            name="pincode"
-                            value={formData.pincode}
-                            onChange={handleInputChange}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
-                          />
-                        </div>
-                      </>
-                    )}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Full Name</label>
+                      <input
+                        type="text"
+                        name="name"
+                        value={formData.name}
+                        onChange={handleInputChange}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
+                        disabled={!isEditing}
+                        required
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                      <input
+                        type="email"
+                        name="email"
+                        value={formData.email}
+                        onChange={handleInputChange}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
+                        disabled={!isEditing}
+                        required
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Phone Number</label>
+                      <input
+                        type="tel"
+                        name="contact"
+                        value={formData.contact}
+                        onChange={handleInputChange}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
+                        disabled={!isEditing}
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Address</label>
+                      <input
+                        type="text"
+                        name="address"
+                        value={formData.address}
+                        onChange={handleInputChange}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
+                        disabled={!isEditing}
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">City</label>
+                      <input
+                        type="text"
+                        name="city"
+                        value={formData.city}
+                        onChange={handleInputChange}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
+                        disabled={!isEditing}
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">State</label>
+                      <input
+                        type="text"
+                        name="state"
+                        value={formData.state}
+                        onChange={handleInputChange}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
+                        disabled={!isEditing}
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Country</label>
+                      <input
+                        type="text"
+                        name="country"
+                        value={formData.country}
+                        onChange={handleInputChange}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
+                        disabled={!isEditing}
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">ZIP Code</label>
+                      <input
+                        type="text"
+                        name="pincode"
+                        value={formData.pincode}
+                        onChange={handleInputChange}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
+                        disabled={!isEditing}
+                      />
+                    </div>
                   </div>
 
                   {isEditing && (
@@ -527,6 +477,91 @@ export default function ProfilePage() {
                 </form>
               </div>
             )}
+
+            {/* Orders Tab */}
+            {activeTab === 'orders' && (
+  <div className="bg-white rounded-lg shadow-sm overflow-hidden">
+    <div className="p-6 border-b border-gray-200">
+      <h2 className="text-lg font-semibold">My Orders</h2>
+    </div>
+    
+    {orders.length === 0 ? (
+      <div className="p-6 text-center text-gray-500">
+        <ShoppingBag className="mx-auto h-12 w-12 text-gray-400 mb-4" />
+        <p>No orders found</p>
+        <button
+          onClick={() => router.push('/shop')}
+          className="mt-4 px-4 py-2 bg-orange-500 text-white rounded-md hover:bg-orange-600"
+        >
+          Start Shopping
+        </button>
+      </div>
+    ) : (
+      <div className="divide-y divide-gray-200">
+        {orders.map((order) => (
+          <div key={order._id} className="p-6 hover:bg-gray-50 transition-colors">
+            <div className="flex justify-between items-start">
+              <div>
+                <h3 className="font-medium text-gray-900">
+                  Order #{order._id.substring(0, 8).toUpperCase()}
+                </h3>
+                <p className="text-sm text-gray-500 mt-1">
+                  Placed on {new Date(order.createdAt).toLocaleDateString()}
+                </p>
+                <p className="text-sm text-gray-500">
+                  Status: <span className={`font-medium ${
+                    order.orderStatus === 'Delivered' ? 'text-green-600' :
+                    order.orderStatus === 'Cancelled' ? 'text-red-600' :
+                    'text-orange-600'
+                  }`}>
+                    {order.orderStatus}
+                  </span>
+                </p>
+              </div>
+              <div className="text-right">
+                <p className="font-medium">{order.totalAmount} {order.currency}</p>
+                <button
+                  onClick={() => router.push(`/orders/${order._id}`)}
+                  className="mt-2 text-sm text-orange-600 hover:text-orange-700"
+                >
+                  View Details
+                </button>
+              </div>
+            </div>
+            
+            <div className="mt-4 flex space-x-4 overflow-x-auto pb-2">
+              {order.items.slice(0, 4).map((item) => (
+                <div key={item._id} className="flex-shrink-0">
+                  <div className="h-16 w-16 rounded-md bg-gray-100 overflow-hidden">
+                    {console.log(item.product)}
+                    {item.product?.image ? (
+                      <img
+                        src={item.product.image}
+                        alt={item.product.name}
+                        className="h-full w-full object-cover"
+                      />
+                    ) : (
+                      <div className="h-full w-full flex items-center justify-center text-gray-400">
+                        <ShoppingBag className="h-6 w-6" />
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ))}
+              {order.items.length > 4 && (
+                <div className="flex-shrink-0 flex items-center justify-center">
+                  <span className="text-sm text-gray-500">
+                    +{order.items.length - 4} more
+                  </span>
+                </div>
+              )}
+            </div>
+          </div>
+        ))}
+      </div>
+    )}
+  </div>
+)}
 
             {/* Security Tab */}
             {activeTab === 'security' && (

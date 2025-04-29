@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const Order = require('../models/Order');
 const Cart = require('../models/Cart');
+const mongoose= require('mongoose')
 
 router.get('/user/:userId', async (req, res) => {
   try {
@@ -14,7 +15,7 @@ router.get('/user/:userId', async (req, res) => {
     const orders = await Order.find({ user: userId })
       .populate({
         path: 'items.product',
-        select: 'name images price' 
+        select: 'name image price' 
       })
       .sort({ createdAt: -1 });
 
@@ -36,7 +37,7 @@ router.get('/user/:userId', async (req, res) => {
 router.post('/create-from-cart', async (req, res) => {
   try {
     const { userId, shippingAddress, contactInfo, currency } = req.body;
-    
+
     // 1. Get cart
     const cart = await Cart.findOne({ userId }).populate('items.productId');
     if (!cart || cart.items.length === 0) {
@@ -60,7 +61,12 @@ router.post('/create-from-cart', async (req, res) => {
 
     await order.save();
 
-    res.json({ 
+    // 3. Clear the cart after order is created
+    cart.items = [];
+    cart.totalPrice = 0;
+    await cart.save();
+
+    res.json({
       orderId: order._id,
       totalAmount: order.totalAmount,
       currency: order.currency
