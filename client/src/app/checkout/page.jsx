@@ -10,7 +10,7 @@ import Link from "next/link";
 import { loadStripe } from '@stripe/stripe-js';
 
 export default function CheckoutPage() {
-  const { user } = useAuth(); // Use the user from context
+  const { user } = useAuth();
   const [cart, setCart] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -103,118 +103,118 @@ export default function CheckoutPage() {
     return true;
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    if (!validateForm()) return;
-    
-    const token = localStorage.getItem("token") || 
-                 document.cookie.split('; ').find(row => row.startsWith('token='))?.split('=')[1];
-    
-    if (!token || !user?._id || !cart) {
-      router.push("/login");
-      return;
-    }
+ // In your CheckoutPage component, modify the handleSubmit function:
 
-    try {
-      // Prepare order data in backend expected format
-      const orderData = {
-        userId: user._id,
-        shippingAddress: {
-          street: formData.address,
-          city: formData.city,
-          state: formData.state,
-          country: formData.country,
-          zipCode: formData.zipCode
+const handleSubmit = async (e) => {
+  e.preventDefault();
+  if (!validateForm()) return;
+  
+  const token = localStorage.getItem("token") || 
+               document.cookie.split('; ').find(row => row.startsWith('token='))?.split('=')[1];
+  
+  if (!token || !user?._id || !cart) {
+    router.push("/login");
+    return;
+  }
+
+  try {
+    // Prepare order data
+    const orderData = {
+      userId: user._id,
+      shippingAddress: {
+        street: formData.address,
+        city: formData.city,
+        state: formData.state,
+        country: formData.country,
+        zipCode: formData.zipCode
+      },
+      contactInfo: {
+        firstName: formData.firstName,
+        lastName: formData.lastName,
+        email: formData.email,
+        phone: formData.phone
+      },
+      paymentMethod: formData.paymentMethod,
+      currency: cart.items[0]?.productId?.priceCurrency || 'USD'
+    };
+
+    if (formData.paymentMethod === 'credit-card') {
+      // First create the order with pending status
+      const orderRes = await fetch("https://api.agiigo.com/api/order/create-from-cart", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`
         },
-        contactInfo: {
-          firstName: formData.firstName,
-          lastName: formData.lastName,
-          email: formData.email,
-          phone: formData.phone
-        },
-        paymentMethod: formData.paymentMethod,
-        currency: cart.items[0]?.productId?.priceCurrency || 'USD'
-      };
-
-      if (formData.paymentMethod === 'credit-card') {
-        // Stripe payment flow
-        const orderRes = await fetch("http://localhost:4000/api/order/create-from-cart", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`
-          },
-          body: JSON.stringify({
-            ...orderData,
-            paymentStatus: 'Pending'
-          }),
-        });
-
-        if (!orderRes.ok) {
-          const errorData = await orderRes.json();
-          throw new Error(errorData.message || "Failed to create order");
-        }
-
-        const order = await orderRes.json();
-        const stripe = await loadStripe("pk_live_51KuK4cBh8DMWVmVh2OTAqSZy4yE0zdRbowRdp3x7W56XVIMbvNcjqMR78O3Y73M5nlx00MrMf7ySHueMZfYX85l600RmDG1scS");
-        
-        const paymentResponse = await fetch("https://api.agiigo.com/api/payment/create-intent", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`
-          },
-          body: JSON.stringify({
-            amount: cart.totalPrice * 100, // Convert to cents
-            currency: orderData.currency,
-            metadata: {
-              userId: user._id,
-              orderId: order._id
-            }
-          }),
-        });
-
-        if (!paymentResponse.ok) throw new Error("Failed to create payment intent");
-        
-        const { clientSecret } = await paymentResponse.json();
-
-        const { error } = await stripe.confirmPayment({
-          clientSecret,
-          confirmParams: {
-            return_url: `${window.location.origin}/order-confirmation?orderId=${order._id}`,
-            receipt_email: formData.email,
-          },
-        });
-
-        if (error) throw error;
-        
-      } else {
-        // Non-Stripe payment methods
-        const res = await fetch("https://api.agiigo.com/api/order/create-from-cart", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`
-          },
-          body: JSON.stringify(orderData),
-        });
-
-        if (!res.ok) {
-          const errorData = await res.json();
-          throw new Error(errorData.message || "Failed to place order");
-        }
-        
-        const order = await res.json();
-        router.push(`/order-confirmation?orderId=${order._id}`);
-      }
-    } catch (err) {
-      console.error("Full error details:", {
-        message: err.message,
-        stack: err.stack
+        body: JSON.stringify({
+          ...orderData,
+          paymentStatus: 'Pending'
+        }),
       });
-      setError(err.message || "Failed to process your order. Please try again.");
+
+      if (!orderRes.ok) {
+        const errorData = await orderRes.json();
+        throw new Error(errorData.message || "Failed to create order");
+      }
+
+      const order = await orderRes.json();
+      
+      // Prepare products for Stripe Checkout
+      const productsForStripe = cart.items.map(item => ({
+        name: item.productId.name,
+        price: item.productId.price,
+        quantity: item.quantity
+      }));
+
+      // Create Stripe Checkout session
+      const stripeResponse = await fetch("http://localhost:4000/api/payment/create-checkout-session", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          products: productsForStripe,
+          orderId: order._id,
+          customerEmail: formData.email
+        }),
+      });
+
+      if (!stripeResponse.ok) throw new Error("Failed to create payment session");
+      
+      const { id: sessionId } = await stripeResponse.json();
+      
+      // Redirect to Stripe Checkout
+      const stripe = await loadStripe("pk_test_51KuK4cBh8DMWVmVhalUYQcjlV7JXUjmLQo3bPjGtrmSMaiiQe15jcc7f6gB8vrtdci6cd8GFBJrjWvHwlbJZZrmb00MXGVuZus");
+      await stripe.redirectToCheckout({ sessionId });
+      
+    } else {
+      // Non-Stripe payment methods
+      const res = await fetch("https://api.agiigo.com/api/order/create-from-cart", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify(orderData),
+      });
+
+      if (!res.ok) {
+        const errorData = await res.json();
+        throw new Error(errorData.message || "Failed to place order");
+      }
+      
+      const order = await res.json();
+      router.push('/order-confirmation');
     }
-  };
+  } catch (err) {
+    console.error("Full error details:", {
+      message: err.message,
+      stack: err.stack
+    });
+    setError(err.message || "Failed to process your order. Please try again.");
+  }
+};
 
   const hasCartItems = () => {
     return cart?.items && Array.isArray(cart.items) && cart.items.length > 0;
