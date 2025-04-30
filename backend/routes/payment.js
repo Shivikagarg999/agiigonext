@@ -22,8 +22,8 @@ router.post("/create-checkout-session", async (req, res) => {
       payment_method_types: ["card"],  // Payment method
       line_items: lineItems,           // Product items to be shown
       mode: "payment",                 // One-time payment
-      success_url: 'http://localhost:3000/success',  // Redirect after successful payment
-      cancel_url: 'http://localhost:3000/cancel',    // Redirect after payment cancellation
+      success_url: 'https://agiigo.com/success',  // Redirect after successful payment
+      cancel_url: 'https://agiigo.com/cancel',    // Redirect after payment cancellation
     });
 
     res.json({ id: session.id });  // Send session ID to frontend
