@@ -167,7 +167,7 @@ const handleSubmit = async (e) => {
       }));
 
       // Create Stripe Checkout session
-      const stripeResponse = await fetch("http://localhost:4000/api/payment/create-checkout-session", {
+      const stripeResponse = await fetch("https://api.agiigo.com/api/payment/create-checkout-session", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -185,7 +185,8 @@ const handleSubmit = async (e) => {
       const { id: sessionId } = await stripeResponse.json();
       
       // Redirect to Stripe Checkout
-      const stripe = await loadStripe("pk_test_51KuK4cBh8DMWVmVhalUYQcjlV7JXUjmLQo3bPjGtrmSMaiiQe15jcc7f6gB8vrtdci6cd8GFBJrjWvHwlbJZZrmb00MXGVuZus");
+      const stripe = await loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY
+      );
       await stripe.redirectToCheckout({ sessionId });
       
     } else {
