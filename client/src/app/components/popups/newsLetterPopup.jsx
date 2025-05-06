@@ -33,7 +33,7 @@ export default function PopupNewsletter() {
     setMessage('')
 
     try {
-      const response = await fetch('https://agi.agiigo.com/api/subscribers', {
+      const response = await fetch('https://api.agiigo.com/api/subscribers', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

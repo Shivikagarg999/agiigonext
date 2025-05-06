@@ -2,37 +2,84 @@ const express = require("express");
 const router = express.Router();
 const Stripe = require("stripe");
 const stripe = Stripe(process.env.STRIPE_SECRET_KEY);  
-// Create a new Checkout session
+const Order= require('../models/Order')
+// In your payment route file
 router.post("/create-checkout-session", async (req, res) => {
-  const { products } = req.body;  // Product details sent from the frontend (name, price, quantity)
-
-  const lineItems = products.map((product) => ({
-    price_data: {
-      currency: "usd",  // Change to AED or your currency
-      product_data: {
-        name: product.name,
-      },
-      unit_amount: product.price * 100,  // Stripe accepts price in cents (e.g., $20 = 2000)
-    },
-    quantity: product.quantity,
-  }));
-
   try {
+    const { products, orderId, customerEmail } = req.body;
+
+    // Validate input
+    if (!products || !Array.isArray(products)) {
+      return res.status(400).json({ error: "Invalid products data" });
+    }
+
+    const lineItems = products.map((product) => ({
+      price_data: {
+        currency: "usd",
+        product_data: {
+          name: product.name,
+        },
+        unit_amount: Math.round(Number(product.price) * 100),
+      },
+      quantity: product.quantity,
+    }));
+
     const session = await stripe.checkout.sessions.create({
-      payment_method_types: ["card"],  // Payment method
-      line_items: lineItems,           // Product items to be shown
-      mode: "payment",                 // One-time payment
-      success_url: 'https://agiigo.com/success',  // Redirect after successful payment
-      cancel_url: 'https://agiigo.com/cancel',    // Redirect after payment cancellation
+      payment_method_types: ["card"],
+      line_items: lineItems,
+      mode: "payment",
+      success_url: 'https://agiigo.com/success',
+      cancel_url:'https://agiigo.com/cancel',
+      customer_email: customerEmail,
+      metadata: {
+        order_id: orderId
+      }
     });
 
-    res.json({ id: session.id });  // Send session ID to frontend
+    res.json({ id: session.id });
   } catch (error) {
-    console.error("Error creating Stripe checkout session", error);
-    res.status(500).send("Internal Server Error");
+    console.error("Stripe error:", error);
+    res.status(500).json({ 
+      error: "Failed to create checkout session",
+      details: error.message 
+    });
   }
 });
+// Add this new route to your payment routes
+router.get("/verify-payment", async (req, res) => {
+  try {
+    const { sessionId, orderId } = req.query;
 
+    // Verify payment with Stripe
+    const session = await stripe.checkout.sessions.retrieve(sessionId);
+
+    if (session.payment_status === 'paid') {
+      // Update order status in your database
+      await Order.findByIdAndUpdate(orderId, { 
+        paymentStatus: 'Paid',
+        stripeSessionId: sessionId 
+      });
+
+      return res.json({ 
+        success: true,
+        paid: true,
+        orderId: orderId
+      });
+    }
+
+    return res.json({ 
+      success: true,
+      paid: false,
+      orderId: orderId
+    });
+  } catch (error) {
+    console.error("Payment verification error:", error);
+    res.status(500).json({ 
+      success: false,
+      error: "Payment verification failed" 
+    });
+  }
+});
 module.exports = router;
 
 
