@@ -122,14 +122,16 @@ const FAQ = () => {
 
         {/* Contact Section */}
         <div className="mt-12 bg-orange-50 rounded-lg p-8 text-center">
-          <h3 className="text-xl font-semibold text-gray-900 mb-3">Still have questions?</h3>
-          <p className="text-gray-600 mb-5">
-            We're here to help. Contact our customer support team.
-          </p>
-          <button className="bg-orange-500 hover:bg-orange-600 text-white font-medium py-2 px-6 rounded-md transition-colors">
-            Contact Us
-          </button>
-        </div>
+  <h3 className="text-xl font-semibold text-gray-900 mb-3">Still have questions?</h3>
+  <p className="text-gray-600 mb-5">
+    We're here to help. Contact our customer support team.
+  </p>
+  <a href="mailto:karan_air@hotmail.com">
+    <button className="bg-orange-500 hover:bg-orange-600 text-white font-medium py-2 px-6 rounded-md transition-colors">
+      Contact Us
+    </button>
+  </a>
+</div>
       </div>
     </div>
   );

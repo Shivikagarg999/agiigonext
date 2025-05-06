@@ -250,7 +250,7 @@ export default function Nav() {
 
             <Link href="/shop" className="font-medium text-gray-800 hover:text-orange-500 transition-colors">Shop</Link>
             <Link href="/about" className="font-medium text-gray-800 hover:text-orange-500 transition-colors">About</Link>
-            <a href="https://sellerhub.agiigo.com/login" className="font-medium text-gray-800 hover:text-orange-500 transition-colors">Sell with us</a>
+            <a href="https://sellerhub.agiigo.com" className="font-medium text-gray-800 hover:text-orange-500 transition-colors">Sell with us</a>
           </div>
 
           {/* Right side - user and cart */}
@@ -415,7 +415,7 @@ export default function Nav() {
                 About
               </Link>
               <a 
-                href="https://sellerhub.agiigo.com/login" 
+                href="https://sellerhub.agiigo.com" 
                 className="block py-2 font-medium text-gray-800 hover:text-orange-500 transition-colors"
                 onClick={() => setIsMenuOpen(false)}
               >

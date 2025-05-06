@@ -2,10 +2,19 @@
 import { useState } from "react";
 import { MagnifyingGlassIcon } from "@heroicons/react/24/outline";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import Chatbot from "../components/Chatbot"
 
 export default function HeroSection() {
   const [searchQuery, setSearchQuery] = useState("");
+  const router = useRouter();
+
+  const handleSearch = (e) => {
+    e.preventDefault();
+    if (searchQuery.trim()) {
+      router.push(`/shop?search=${encodeURIComponent(searchQuery.trim())}`);
+    }
+  };
 
   return (
     <div className="bg-gray-50">
@@ -31,7 +40,7 @@ export default function HeroSection() {
             </p>
             
             {/* Enhanced search bar with Temu-like styling */}
-            <div className="mb-10 relative w-full max-w-2xl">
+            <form onSubmit={handleSearch} className="mb-10 relative w-full max-w-2xl">
               <div className="relative flex items-center shadow-xl rounded-full bg-white overflow-hidden">
                 <input 
                   type="text" 
@@ -42,6 +51,7 @@ export default function HeroSection() {
                             focus:ring-1 focus:ring-[#FF6B00] text-gray-800 placeholder-gray-400 text-base"
                 />
                 <button 
+                  type="submit"
                   className="absolute right-2 bg-[#FF6B00] hover:bg-[#E55C00] 
                             p-2.5 rounded-full transition-colors duration-200"
                   aria-label="Search"
@@ -49,7 +59,7 @@ export default function HeroSection() {
                   <MagnifyingGlassIcon className="h-6 w-6 text-white" />
                 </button>
               </div>
-            </div>
+            </form>
 
             {/* CTA Buttons with enhanced styling */}
             <div className="flex flex-col sm:flex-row gap-4 md:gap-6">

@@ -9,6 +9,48 @@ import Footer from "../footer/Footer";
 import TopBar from "../components/TopBar";
 import BrowseByCategory from "../category/page";
 
+// Fuzzy search helper function
+function getSearchScore(query, text) {
+  if (!query) return 0;
+  
+  query = query.toLowerCase();
+  text = text.toLowerCase();
+
+  // Exact match gets highest score
+  if (text === query) return 1.0;
+  
+  // Contains match gets high score
+  if (text.includes(query)) return 0.9;
+  
+  // Initialize variables
+  let queryIndex = 0;
+  let totalCharacterScore = 0;
+  let queryLength = query.length;
+  let textLength = text.length;
+  
+  // Iterate through each character in the text
+  for (let textIndex = 0; textIndex < textLength && queryIndex < queryLength; textIndex++) {
+    const queryChar = query[queryIndex];
+    const textChar = text[textIndex];
+    
+    if (queryChar === textChar) {
+      queryIndex++;
+      totalCharacterScore += 1;
+    } else {
+      totalCharacterScore -= 0.1;
+    }
+  }
+  
+  // Calculate final score (0 to 1)
+  let score = (totalCharacterScore / queryLength);
+  
+  // Apply length penalty
+  const lengthPenalty = 0.1 * (textLength - queryLength) / queryLength;
+  score = Math.max(0, score - lengthPenalty);
+  
+  return score;
+}
+
 function ProductsContent() {
   const [products, setProducts] = useState([]);
   const [categories, setCategories] = useState([]);
@@ -22,9 +64,12 @@ function ProductsContent() {
   const [showCategories, setShowCategories] = useState(false);
   const [currency, setCurrency] = useState(null);
   const [showCurrencyDropdown, setShowCurrencyDropdown] = useState(false);
+  const [searchSuggestions, setSearchSuggestions] = useState([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
 
   const searchParams = useSearchParams();
   const categoryFromQuery = searchParams.get("category");
+  const searchFromQuery = searchParams.get("search");
 
   const generateRandomRating = () => {
     const base = 4;
@@ -85,8 +130,33 @@ function ProductsContent() {
   }, []);
 
   useEffect(() => {
+    if (searchFromQuery) {
+      setSearchQuery(searchFromQuery);
+      setShowSuggestions(false);
+    }
+  }, [searchFromQuery]);
+
+  useEffect(() => {
     setSelectedCategory(categoryFromQuery);
   }, [categoryFromQuery]);
+
+  useEffect(() => {
+    // Generate search suggestions
+    if (searchQuery.length > 2) {
+      const suggestions = products
+        .map(p => ({
+          name: p.name,
+          score: getSearchScore(searchQuery, p.name)
+        }))
+        .filter(p => p.score > 0.4)
+        .sort((a, b) => b.score - a.score)
+        .slice(0, 5);
+      
+      setSearchSuggestions(suggestions);
+    } else {
+      setSearchSuggestions([]);
+    }
+  }, [searchQuery, products]);
 
   useEffect(() => {
     let filtered = products;
@@ -110,9 +180,15 @@ function ProductsContent() {
     filtered = filtered.filter((product) => product.price <= priceRange);
     
     if (searchQuery) {
-      filtered = filtered.filter((product) =>
-        product.name.toLowerCase().includes(searchQuery.toLowerCase())
-      );
+      filtered = filtered
+        .map(product => ({
+          ...product,
+          matchScore: getSearchScore(searchQuery, product.name) * 0.7 + 
+                     getSearchScore(searchQuery, product.description || '') * 0.2 +
+                     getSearchScore(searchQuery, product.category || '') * 0.1
+        }))
+        .filter(product => product.matchScore > 0.3)
+        .sort((a, b) => b.matchScore - a.matchScore);
     }
 
     setFilteredProducts(filtered);
@@ -147,6 +223,16 @@ function ProductsContent() {
       Math.max(...currencyProducts.map(p => p.price)) : 
       1000;
     setPriceRange(highestPrice);
+  };
+
+  const handleSearchChange = (e) => {
+    setSearchQuery(e.target.value);
+    setShowSuggestions(true);
+  };
+
+  const selectSuggestion = (suggestion) => {
+    setSearchQuery(suggestion);
+    setShowSuggestions(false);
   };
 
   return (
