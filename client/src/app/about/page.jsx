@@ -1,7 +1,7 @@
 "use client"; 
 
 import Image from "next/image";
-import { CheckCircle } from "lucide-react";
+import { CheckCircle, Rocket, PieChart,ArrowRight, Shield} from "lucide-react";
 import { motion } from "framer-motion"; 
 import Nav from "../nav/Nav";
 import Footer from "../footer/Footer";
@@ -29,12 +29,9 @@ const AboutUs = () => {
           >
             WHO WE ARE
           </motion.span>
-          <h2 className="text-3xl font-bold mt-4 text-black">Agiigo – The Ultimate Marketplace</h2>
+          <h2 className="text-3xl font-bold mt-4 text-black">Your Trusted Online Marketplace in Dubai</h2>
           <p className="text-gray-600 mt-4">
-            At Agiigo, we are a dynamic online marketplace that connects sellers and buyers seamlessly. 
-            Our platform enables sellers to list and showcase their products while providing buyers with 
-            a diverse selection of high-quality electronics, gadgets, and more – all in one place. We aim 
-            to create a smooth, secure, and efficient shopping experience for both sellers and customers.
+          At Agiigo, we’ve created a platform where buying and selling online is easy, secure, and reliable. We focus on the local market in Dubai and the UAE, offering a place where buyers can find quality products and sellers can connect with customers looking for great deals.
           </p>
 
           {/* Benefits List - Animating each item */}
@@ -48,11 +45,11 @@ const AboutUs = () => {
             }}
           >
             {[
-              "A powerful platform for sellers to reach a wider audience",
-              "A vast collection of products from multiple trusted sellers",
-              "Secure transactions for a hassle-free buying experience",
-              "24/7 customer support to assist buyers and sellers",
-              "Competitive pricing with exciting deals and offers",
+             "A reliable platform for sellers to expand their reach across the UAE",
+"A diverse range of products from trusted local sellers",
+"Safe transactions for a worry-free shopping experience",
+"Friendly customer support available around the clock for both buyers and sellers",
+"Great deals and competitive pricing on products you love",
             ].map((text, index) => (
               <motion.li 
                 key={index} 
@@ -85,12 +82,13 @@ const AboutUs = () => {
       <div className="max-w-6xl w-full grid grid-cols-1 md:grid-cols-2 items-center gap-8 bg-white bg-opacity-80 p-8 rounded-lg shadow-lg">
         {/* Text Content */}
         <div className="space-y-4">
-          <h2 className="text-3xl md:text-4xl font-bold text-gray-800">
-            Your trusted and <br /> reliable shop
-          </h2>
-          <p className="text-gray-600 text-lg">
-            At Agiigo, we strive to offer top-quality products that cater to your needs. Whether you're looking for cutting-edge gadgets or everyday essentials, we have a wide selection of flash sales, best sellers, top-rated products, and new arrivals to keep you ahead of the curve.
-          </p>
+         <h2 className="text-3xl md:text-4xl font-bold text-gray-800">
+  Your Go-To Marketplace for Quality Products
+</h2>
+<p className="text-gray-600 text-lg">
+  At Agiigo, we’re committed to bringing you the best products at great prices. Whether you're shopping for the latest gadgets, home essentials, or exclusive deals, our collection of top-rated items, new arrivals, and best sellers ensures you’ll always find what you need.
+</p>
+
           <motion.button 
             whileHover={{ scale: 1.1 }} 
             whileTap={{ scale: 0.95 }} 
@@ -100,6 +98,41 @@ const AboutUs = () => {
         </div>
       </div>
     </div>
+    <div className="bg-white p-8 rounded-xl border border-gray-100 shadow-xs mt-12">
+  <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-6">
+    <div className="flex-1">
+      <h3 className="text-2xl font-bold text-gray-900 mb-3">Grow Your Business with Agiigo Seller Hub</h3>
+      <p className="text-gray-600 text-lg">
+      Agiigo is not just for buyers.We’re also a powerful platform for sellers across Dubai and the UAE. Whether you're a business or an individual, you can set up your store and start reaching thousands of local customers. </p>
+    </div>
+    
+    <div className="flex flex-col sm:flex-row md:flex-col lg:flex-row gap-3">
+      <a 
+        href="https://sellerhub.agiigo.com" 
+        className="bg-orange-500 hover:bg-orange-600 text-white font-medium py-3 px-6 rounded-lg text-center transition-colors shadow-sm hover:shadow-md whitespace-nowrap"
+      >
+        Start Selling Now
+      </a>
+    </div>
+  </div>
+  
+  <div className="mt-6 pt-6 border-t border-gray-100">
+    <div className="flex flex-wrap gap-x-8 gap-y-4">
+      <div className="flex items-center">
+        <CheckCircle className="w-5 h-5 text-green-500 mr-2" />
+        <span className="text-gray-700">No monthly fees</span>
+      </div>
+      <div className="flex items-center">
+        <CheckCircle className="w-5 h-5 text-green-500 mr-2" />
+        <span className="text-gray-700">Easy product upload</span>
+      </div>
+      <div className="flex items-center">
+        <CheckCircle className="w-5 h-5 text-green-500 mr-2" />
+        <span className="text-gray-700">24/7 seller support</span>
+      </div>
+    </div>
+  </div>
+</div>
       <FAQ/>
       <Footer />
     </div>

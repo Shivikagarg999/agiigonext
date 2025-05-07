@@ -30,13 +30,14 @@ export default function HeroSection() {
 
         <div className="container mx-auto px-4 sm:px-6 lg:px-8 w-full relative z-10">
           <div className="max-w-2xl px-6 py-12 md:px-10 md:py-16 lg:py-20 rounded-lg">
-            <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold leading-tight mb-4 tracking-tight">
-              Style <span className="text-[#FF6B00]">Redefined</span>
-            </h1>
+          <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold leading-tight mb-4">
+  Buy and Sell Online <br />
+  <span className="text-[#FF6B00]">In Dubai with Agiigo</span>
+</h1>
+
             
             <p className="text-lg md:text-xl text-gray-100 mb-8 leading-relaxed max-w-lg">
-              Discover premium fashion that blends quality with contemporary design. 
-              Shop the latest trends at unbeatable prices with fast delivery.
+            Shop electronics, fashion, home essentials, and more from verified sellers across the UAE.
             </p>
             
             {/* Enhanced search bar with Temu-like styling */}
