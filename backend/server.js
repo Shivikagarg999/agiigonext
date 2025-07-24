@@ -27,7 +27,7 @@ app.use(cookieParser());
 JWT_SECRET='5d9a573fea33f72342dc47bec8951b4bcba0ae61283ce0ee6cfa26659e0b5837'
 
 // ✅ CORS Setup
-const allowedOrigins = ["https://agiigo.com","https://www.agiigo.com","http://localhost:3000", "https://sellerhub.agiigo.com",];
+const allowedOrigins = ["https://agiigo.com","https://www.agiigo.com","http://localhost:3000", "https://sellerhub.agiigo.com", "https://mkshoppingzone.com", "https://www.mkshoppingzone.com"];
 const corsOptions = {
   origin: allowedOrigins,
   credentials: true, 
