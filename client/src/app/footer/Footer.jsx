@@ -84,24 +84,7 @@ export default function Footer() {
               <FaMapMarkerAlt className="mt-0.5 mr-3 text-[#EB8426] text-sm flex-shrink-0" />
               <span className="text-gray-600 text-sm">Dubai HQ</span>
             </li>
-            <li className="flex items-start">
-              <FaPhoneAlt className="mt-0.5 mr-3 text-[#EB8426] text-sm flex-shrink-0" />
-              <a 
-                href="tel:+971588588466" 
-                className="text-gray-600 hover:text-[#EB8426] text-sm transition-colors duration-200"
-              >
-                +97158572631
-              </a>
-            </li>
-            <li className="flex items-start">
-              <FaEnvelope className="mt-0.5 mr-3 text-[#EB8426] text-sm flex-shrink-0" />
-              <a 
-                href="mailto:info@getnotmuch.com" 
-                className="text-gray-600 hover:text-[#EB8426] text-sm transition-colors duration-200"
-              >
-                info@getnotmuch.com
-              </a>
-            </li>
+            
           </ul>
         </div>
       </div>
